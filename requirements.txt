@@ -8,3 +8,4 @@ tqdm
 filelock
 typer
 sh
+asf-core-utils@ git+https://github.com/nestauk/asf-core-utils@2_epc_processing#egg=asf-core-utils
