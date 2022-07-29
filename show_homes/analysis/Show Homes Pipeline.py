@@ -21,10 +21,18 @@
 import pandas as pd
 import numpy as np
 
+import geopy
+
 import requests
 import json
 from time import sleep
+import random
 
+import gradio as gr
+
+
+from keplergl import KeplerGl
+import yaml
 import asf_core_data
 
 from asf_core_data.getters.epc import epc_data, data_batches
@@ -38,6 +46,10 @@ from asf_core_data.pipeline.data_joining import merge_install_dates
 from asf_core_data.pipeline.data_joining import merge_install_dates
 
 from asf_core_data.utils.visualisation import easy_plotting, kepler
+
+from asf_core_data.getters.supplementary_data.deprivation import imd_data
+from asf_core_data.utils.visualisation import easy_plotting
+
 
 import ipywidgets
 from ipywidgets import interact, FloatSlider, fixed
@@ -54,11 +66,6 @@ from asf_core_data import Path
 LOCAL_DATA_DIR = "/Users/juliasuter/Documents/ASF_data"
 
 # %%
-# Takes a while!
-# Run only if you have the data 'EPC_GB_preprocessed_and_deduplicated' at hand,
-# no need to download it just for testing this line of code!
-# You can also simply re-name 'EPC_Wales_preprocessed_and_deduplicated' which was created in the previous cell
-
 EPC_FEAT_SELECTION = [
     "ADDRESS1",
     "ADDRESS2",
@@ -91,23 +98,17 @@ epc_df_with_MCS = merge_install_dates.manage_hp_install_dates(epc_df)
 epc_df_with_MCS.head()
 
 # %%
-epc_df_with_MCS.to_csv("epc_df_with_mcs.csv")
+epc_df_with_MCS = pd.read_csv("epc_df_with_mcs.csv")
 
 # %%
-from asf_core_data.getters.supplementary_data.deprivation import imd_data
+# epc_df_with_MCS.to_csv('epc_df_with_mcs.csv')
 
+# %%
 imd_df = imd_data.get_gb_imd_data(data_path=LOCAL_DATA_DIR)
 
-# %%
-imd_df.head()
-
-# %%
 epc_df = imd_data.merge_imd_with_other_set(
     imd_df, epc_df_with_MCS, postcode_label="Postcode"
 )
-
-# %%
-epc_df.shape
 
 # %%
 visitor_cond = (
@@ -116,23 +117,14 @@ visitor_cond = (
     & (epc_df["IMD Decile"] >= 5)
     & (~epc_df["HP_INSTALLED"])
 )
-###  | ((epc_df['PROPERTY_TYPE'] == 'Flat')
-# & (epc_df['IMD Decile'] >=5)
-# & (~epc_df['HP_INSTALLED'])))
-visitor_cond
 
 visitor_epc_df = epc_df.loc[visitor_cond]
-
-# %%
-visitor_epc_df.shape
 
 # %%
 visitor_epc_df["HP_INSTALLED"].value_counts(dropna=False, normalize=True)
 
 # %%
 epc_df["HP_INSTALLED"].value_counts(dropna=False, normalize=True)
-
-# %%
 
 # %%
 epc_df["HP_INSTALLED"].value_counts(dropna=False, normalize=False)
@@ -162,10 +154,6 @@ easy_plotting.plot_subcategory_distribution(
 )
 
 # %%
-
-# %%
-from asf_core_data.utils.visualisation import easy_plotting
-
 easy_plotting.plot_subcats_by_other_subcats(
     epc_df,
     "HP_INSTALLED",
@@ -181,13 +169,11 @@ coord_df = coordinates.get_postcode_coordinates(data_path=LOCAL_DATA_DIR)
 coord_df.head()
 coord_df["POSTCODE"] = coord_df["POSTCODE"].str.replace(" ", "")
 
+# %%
 epc_df = epc_df.rename(columns={"Postcode": "POSTCODE"})
-epc_df.drop(columns=["LONGITUDE", "LATITUDE"], inplace=True)
+# epc_df.drop(columns=['LONGITUDE', 'LATITUDE'], inplace=True)
 epc_df = pd.merge(epc_df, coord_df, on=["POSTCODE"], how="left")
 print(epc_df.shape)
-
-# %%
-epc_df.head()
 
 # %%
 hp_props = epc_df.loc[epc_df["HP_INSTALLED"]]
@@ -198,23 +184,8 @@ visitor_epc_df = epc_df.loc[visitor_cond]
 print(visitor_epc_df.shape)
 
 # %%
-hp_props["LONGITUDE"].value_counts()
-
-# %%
 from keplergl import KeplerGl
 import yaml
-
-# network_df = pd.read_csv("network.csv")
-
-# config_file = 'network_config.txt'
-# with open(config_file, "r") as infile:
-#     config = infile.read()
-#     config = yaml.load(config, Loader=yaml.FullLoader)
-
-# hp_props['LONGITUDE'] = hp_props['LONGITUDE'].astype('float')
-# visitor_epc_df['LONGITUDE'] = visitor_epc_df['LONGITUDE'].astype('float')
-# hp_props['LATITUDE'] = hp_props['LATITUDE'].astype('float')
-# visitor_epc_df['LATITUDE'] = visitor_epc_df['LATITUDE'].astype('float')
 
 network_map = KeplerGl(height=500)  # , config=config)
 
@@ -264,114 +235,6 @@ def to_Cartesian(lat, lng):
 
 
 # %%
-# terraced = ["Enclosed Mid-Terrace", "Enclosed End-Terrace", "End-Terrace", "Mid-Terrace"]
-# no_cond = ~epc_df['LATITUDE'].isna()
-# flat = epc_df['PROPERTY_TYPE'] == 'Flat'
-# terraced_house = ((epc_df['PROPERTY_TYPE'] == 'House') & (epc_df['BUILT_FORM'].isin(terraced)))
-# detached_house = ((epc_df['PROPERTY_TYPE'] == 'House') & (epc_df['BUILT_FORM'] == 'Detached'))
-# semi_house = ((epc_df['PROPERTY_TYPE'] == 'House') & (epc_df['BUILT_FORM'] == 'Semi-Detached'))
-
-# dist_matrices = {}
-# dist_matrices_similar = {}
-
-# from collections import defaultdict
-# from scipy import spatial
-
-# driving_dist = defaultdict(lambda: defaultdict(dict))
-# driving_dist_similar = defaultdict(lambda: defaultdict(dict))
-
-# cond_labels = ['Flat', 'Semi-detached house', 'Detached House', 'Terraced House']
-
-
-# with open('./outputs/distances.csv', 'a') as outfile:
-
-
-#     for i, conds in enumerate([flat, semi_house, detached_house, terraced_house]):
-
-#         label = cond_labels[i]
-
-#         epc_df = epc_df[epc_df['LATITUDE'].notna()]
-#         epc_df = epc_df[epc_df['LONGITUDE'].notna()]
-
-#         epc_df_sampled = epc_df.loc[~epc_df['HP_INSTALLED']].sample(frac=1, random_state=42)
-#         hp_sampled = epc_df.loc[epc_df['HP_INSTALLED']].sample(frac=1, random_state=42)
-
-#         print(epc_df_sampled.shape)
-#         print(hp_sampled.shape)
-
-#         print(label)
-#         print('-----')
-
-#         epc_df_sampled = epc_df_sampled.loc[conds]
-#         hp_sampled = hp_sampled.loc[~hp_sampled['LATITUDE'].isna()]
-#         print('# Properties:', epc_df_sampled.shape)
-
-
-#         prop_coords_org = epc_df_sampled[['LATITUDE', 'LONGITUDE']].to_numpy()
-#         hp_prop_coords_org = hp_sampled[['LATITUDE', 'LONGITUDE']].to_numpy()
-#         hp_prop_coords_similar_type_org = hp_sampled.loc[conds][['LATITUDE', 'LONGITUDE']].to_numpy()
-
-#         prop_coords = np.deg2rad(prop_coords_org.copy())
-#         hp_prop_coords = np.deg2rad(hp_prop_coords_org.copy())
-#         hp_prop_coords_similar_type = np.deg2rad(hp_prop_coords_similar_type_org.copy())
-
-#         prop_coords = to_Cartesian(prop_coords[:,0],prop_coords[:,1])
-#         hp_prop_coords = to_Cartesian(hp_prop_coords[:,0],hp_prop_coords[:,1])
-#         hp_prop_coords_similar_type = to_Cartesian(hp_prop_coords_similar_type[:,0],hp_prop_coords_similar_type[:,1])
-
-#         hp_prop_dict = {'any': hp_prop_coords, 'similar': hp_prop_coords_similar_type}
-#         coords_dict = {'any': hp_prop_coords_org, 'similar': hp_prop_coords_similar_type_org}
-
-#         for version in ['any', 'similar']:
-
-#             failed = []
-
-#             hp_coords = hp_prop_dict[version]
-#             hp_coords_org = coords_dict[version]
-
-#             print('now computing tree...')
-#             tree = spatial.KDTree(hp_coords)
-#             distances, indices = tree.query(prop_coords)
-
-#             #indices = np.where(indices==hp_coords.shape[0], None, indices)
-
-#             print('Done')
-
-#             for i, coord_pair in enumerate(zip(prop_coords_org, hp_coords_org[indices])):
-
-#                 if label == 'All' and version == 'similar':
-#                     continue
-
-#                 coords_1 = (coord_pair[0][0],coord_pair[0][1])
-#                 coords_2 = (coord_pair[1][0],coord_pair[1][1])
-
-
-#                 dist_duration = get_travel_distance_and_duration(coords_1, coords_2)
-
-
-#                 if dist_duration is None:
-#                     failed.append(i)
-#                     continue
-
-#                 distance, duration = dist_duration
-
-
-#                 out = [str(i), label,version,str(coords_1[0]),str(coords_1[1]),str(coords_2[0]),str(coords_2[1]),str(distance),str(duration)]
-#                 out = ','.join(out)
-
-#                 outfile.write(out)
-#                 outfile.write('\n')
-
-#                 sleep(1.5)
-
-#                 if i < 5:
-#                     print(i)
-#                     print(distance, duration)
-
-
-#             print('Failed:', failed)
-
-# %%
 df = epc_df
 
 terraced = [
@@ -396,11 +259,6 @@ cond_dict = {
 
 df = df[df["LATITUDE"].notna()]
 df = df[df["LONGITUDE"].notna()]
-
-# %%
-import scipy
-
-scipy.__version__
 
 
 # %%
@@ -438,7 +296,6 @@ LA_widget = ipywidgets.SelectMultiple(
 
 
 @interact(
-    df=fixed(df),
     property_type=property_types,
     same_prop_type=[True, False],
     host_ratio=host_ratio_widget,
@@ -449,7 +306,6 @@ LA_widget = ipywidgets.SelectMultiple(
     local_auth=LA_widget,
 )
 def compute_network_measure(
-    df,
     property_type,
     same_prop_type,
     host_ratio,
@@ -463,24 +319,42 @@ def compute_network_measure(
     label = property_type
     conds = cond_dict[property_type]
 
-    v_max = v_max * n_open_days
+    v_max = int(v_max * n_open_days)
     host_ratio = host_ratio / 100
     vistor_ratio = vistor_ratio / 100
+
+    local_auth_str = local_auth if local_auth != "all GB (not recommended)" else "ßßGB"
+    print(local_auth)
+
+    settings_string = (
+        property_type
+        + str(same_prop_type)
+        + str(host_ratio)
+        + str(vistor_ratio)
+        + str(v_max)
+        + str(d_max)
+        + local_auth_str
+    )
 
     non_hp_samples = df.loc[~df["HP_INSTALLED"] & conds]
     hp_samples = df.loc[df["HP_INSTALLED"]]
     hp_same_type_samples = df.loc[df["HP_INSTALLED"] & conds]
 
-    if local_auth:
+    if local_auth != "all GB (not recommended)":
         non_hp_samples = non_hp_samples.loc[
-            non_hp_samples["LOCAL_AUTHORITY_LABEL"].isin(local_auth)
+            non_hp_samples["LOCAL_AUTHORITY_LABEL"].isin([local_auth])
         ]
+        # hp_samples = non_hp_samples.loc[hp_samples['LOCAL_AUTHORITY_LABEL'].isin(local_auth)]
+        # hp_same_type_samples = hp_same_type_samples.loc[hp_samples['LOCAL_AUTHORITY_LABEL'].isin(local_auth)]
 
     print("Before subsampling:")
     print("# Props without HPs: {}".format(non_hp_samples.shape[0]))
     print("# Props with HPs: {}".format(hp_samples.shape[0]))
     print("# Similar props with with HPs: {}".format(hp_same_type_samples.shape[0]))
 
+    before = "Overall situation:\n# Props without HPs: {}\n# Props with HPs: {}\n# Similar props with with HPs: {}".format(
+        non_hp_samples.shape[0], hp_samples.shape[0], hp_same_type_samples.shape[0]
+    )
     n_non_hp_samples = int(non_hp_samples.shape[0] * vistor_ratio)
     n_hp_samples = int(hp_samples.shape[0] * host_ratio)
     n_hp_same_type_samples = int(hp_same_type_samples.shape[0] * host_ratio)
@@ -495,199 +369,463 @@ def compute_network_measure(
     print("After subsampling:")
     print("# Props without HPs: {}".format(non_hp_samples.shape[0]))
     print("# Props with HPs: {}".format(hp_samples.shape[0]))
-    print("# Similar props with with HPs: {}".format(hp_same_type_samples.shape[0]))
+    print("# Similar props with HPs: {}".format(hp_same_type_samples.shape[0]))
 
+    after = "After subsampling:\n# Props without HPs: {}\n# Props with HPs: {}\n# Similar props with HPs: {}".format(
+        non_hp_samples.shape[0], hp_samples.shape[0], hp_same_type_samples.shape[0]
+    )
     non_hp_coords, non_hp_coords_org = prepare_coords(non_hp_samples)
     hp_coords, hp_coords_org = prepare_coords(hp_samples)
     sim_hp_coords, sim_hp_coords_org = prepare_coords(hp_same_type_samples)
+
+    print(local_auth)
+    if local_auth != "all GB (not recommended)":
+        out_of_la_all = np.array(
+            ~hp_samples["LOCAL_AUTHORITY_LABEL"].isin([local_auth])
+        )
+        out_of_la_sim = np.array(
+            ~hp_same_type_samples["LOCAL_AUTHORITY_LABEL"].isin([local_auth])
+        )
+        out_of_la_dict = {"any": out_of_la_all, "similar": out_of_la_sim}
 
     hp_prop_dict = {"any": hp_coords, "similar": sim_hp_coords}
     org_coords_dict = {"any": hp_coords_org, "similar": sim_hp_coords_org}
 
     version = "similar" if same_prop_type else "any"
 
-    failed = []
-
     hp_set_coords = hp_prop_dict[version]
     hp_set_coords_org = org_coords_dict[version]
+    n_hp_props = hp_set_coords_org.shape[0]
 
-    tree = spatial.KDTree(hp_set_coords)
-    distances, indices = tree.query(non_hp_coords)
+    tree = spatial.KDTree(hp_set_coords)  # remove
+    distances, indices = tree.query(non_hp_coords)  # remove
 
-    v_collection = []
-    host_array = np.zeros((indices.shape[0]))
+    v_collection = []  # remove
+    host_array = np.zeros((indices.shape[0]))  # remove
 
     host_tree = spatial.KDTree(hp_set_coords)
     visitor_tree = spatial.KDTree(non_hp_coords)
-    v_counts_old = host_tree.count_neighbors(visitor_tree, r=d_max, cumulative=False)
+    v_counts_old = host_tree.count_neighbors(
+        visitor_tree, r=d_max, cumulative=False
+    )  # remove
     match_indices = host_tree.query_ball_tree(visitor_tree, r=d_max)
 
-    # print(match_indices)
-    v_counts = np.array([[len(x) for x in match_indices]])
-    match_indices = list(set([x for xs in match_indices for x in xs]))
-    capacity_array = np.zeros((indices.shape[0]))
-    capacity_array[match_indices] = 1
+    host_opts_org = np.array([[len(x) for x in match_indices]])[0]
 
-    original_v_counts = v_counts.copy()
+    filter_host_data = False
+    zero_game = False
 
-    over_cap_ratio = np.count_nonzero(v_counts > v_max) / v_counts.shape[1] * 100
-    v_counts[v_counts >= v_max] = v_max
+    if not [x for xs in match_indices for x in xs]:
 
-    v_data = np.zeros((v_counts.shape[1], 4))
-    v_data[:, 0] = v_counts
-    v_data[:, 1] = original_v_counts
-    v_data[:, 2] = hp_set_coords_org[:, 0]
-    v_data[:, 3] = hp_set_coords_org[:, 1]
+        vistor_opts_org = np.zeros(n_non_hp_samples).astype(int)
+        vistor_opts = np.zeros(n_non_hp_samples).astype(int)
+        visitor_match = np.zeros((n_non_hp_samples)).astype(int)
 
-    for ind in set(indices):
+        host_opts_org = np.zeros(n_hp_props).astype(int)
+        host_opts = np.zeros(n_hp_props).astype(int)
 
-        same_ind = np.where(indices == ind)
-        all_distances = distances[same_ind]
+        n_countable_hp_props = host_opts_org.shape[0]
+        zero_game = True
 
-        all_distances = all_distances[all_distances < d_max]
-        v = all_distances.shape[0]
-        v = v if v <= v_max else v_max
-        host_array[same_ind] = v
-        v_collection.append(v)
+    else:
 
-    max_vis_dict = defaultdict(int)
+        org_indices_counts = np.array([x for xs in match_indices for x in xs])[0]
 
-    visitor_array = np.zeros((non_hp_coords.shape[0]))
+        unique_values, unique_counts = np.unique(org_indices_counts, return_counts=True)
+        vistor_opts_org = np.zeros(n_non_hp_samples)
+        vistor_opts_org[unique_values] = unique_counts
 
-    for i in range(non_hp_coords.shape[0]):
+        v_counts = np.array([[len(x) for x in match_indices]])  # remove
+        original_v_counts = v_counts.copy()  # remove
 
-        closest_ind = indices[i]
-        if max_vis_dict[closest_ind] < v_max:
-            max_vis_dict[closest_ind] += 1
-            visitor_array[i] = 1
+        upd_match_indices = []
+        for i, host_matches in enumerate(match_indices):
+            upd_match_indices.append(
+                random.sample(host_matches, len(host_matches))[:v_max]
+            )
+
+        #             v_counts = np.array([[len(x) for x in upd_match_indices]])[0] # remove all
+        #             upd_match_indices_counts = np.array([x for xs in upd_match_indices for x in xs]) # remove all
+        #             upd_match_indices_unique = list(set([x for xs in upd_match_indices for x in xs])) # remove all
+        #             coverage_array =  np.zeros((n_non_hp_samples)) # remove all
+        #             coverage_array[upd_match_indices_unique] = 1 # remove all
+
+        host_opts = np.array([[len(x) for x in upd_match_indices]])[0]
+
+        indices_counts = np.array([x for xs in upd_match_indices for x in xs])
+        unique_values, unique_counts = np.unique(indices_counts, return_counts=True)
+        vistor_opts = np.zeros(n_non_hp_samples)
+        vistor_opts[unique_values] = unique_counts
+
+        upd_match_indices_unique = np.unique(indices_counts)
+        visitor_match = np.zeros((n_non_hp_samples))
+        visitor_match[upd_match_indices_unique] = 1
+
+        print(visitor_match.shape)
+
+        print(host_opts.shape)
+        print(host_opts_org.shape)
+
+        if local_auth != "all GB (not recommended)":
+            out_of_la = out_of_la_dict[version]
+            host_w_match = host_opts > 0
+            n_countable_hp_props = (~out_of_la | host_w_match).sum()
+            show_home_filter = ~out_of_la | host_w_match
+            filter_host_data = True
+        else:
+            n_countable_hp_props = host_opts_org.shape[0]
+
+    over_cap_ratio = (
+        np.count_nonzero(host_opts_org >= v_max) / n_countable_hp_props * 100
+    )
+
+    #         print(v_counts.shape)
+
+    #         mask = np.where(v_counts==0)                 # filter out values larger than 5
+    #         print(mask)
+
+    #         print(hp_set_coords_org.shape)
+    #         no_match_hosts = hp_set_coords_org[mask]
+    #         print(no_match_hosts.shape)
+
+    #         #if no_match_hosts.shape[0]:
+    #         no_match_hosts = pd.DataFrame(no_match_hosts, columns = ['LATITUDE', 'LONGITUDE'])
+    #         no_match_hosts.to_csv('unmatched_hosts.csv')
+
+    # over_cap_ratio = np.count_nonzero(original_v_counts > v_max)/original_v_counts.shape[1]*100
+
+    # v_counts[v_counts >= v_max] = v_max
+    host_opts[host_opts >= v_max] = v_max
+
+    connections = np.zeros((n_hp_props * v_max, 5))
+
+    counter = 0
+
+    for i in range(n_hp_props):
+
+        m = host_opts[i]
+
+        for j in range(m):
+            connections[counter, :2] = hp_set_coords_org[i]
+            connections[counter, 2:4] = non_hp_coords_org[upd_match_indices[i][j]]
+
+            connections[counter, 4] = round(
+                geopy.distance.distance(
+                    hp_set_coords_org[i], non_hp_coords_org[upd_match_indices[i][j]]
+                ).km,
+                1,
+            )
+
+            counter += 1
+
+    connections = connections[~np.all(connections == 0, axis=1)]
+
+    connections_df = pd.DataFrame(
+        connections,
+        columns=[
+            "LATITUDE source",
+            "LONGITUDE source",
+            "LATITUDE target",
+            "LONGITUDE target",
+            "Distance",
+        ],
+    )
+
+    if filter_host_data and not zero_game:
+
+        host_data = np.zeros((n_countable_hp_props, 5))
+        host_data[:, 0] = hp_set_coords_org[show_home_filter, 0]
+        host_data[:, 1] = hp_set_coords_org[show_home_filter, 1]
+        host_data[:, 2] = host_opts[show_home_filter]
+        host_data[:, 3] = host_opts_org[show_home_filter]
+        host_data[:, 4] = host_w_match[show_home_filter]
+
+    else:
+
+        host_data = np.zeros((n_hp_props, 5))
+        host_data[:, 0] = hp_set_coords_org[:, 0]
+        host_data[:, 1] = hp_set_coords_org[:, 1]
+        host_data[:, 2] = host_opts
+        host_data[:, 3] = host_opts_org
+        host_data[:, 4] = host_opts > 0
+
+    host_data_df = pd.DataFrame(
+        host_data,
+        columns=[
+            "LATITUDE",
+            "LONGITUDE",
+            "Visitor matches (capped)",
+            "Visitor matches",
+            "Host coverage",
+        ],
+    )
+
+    visitor_data = np.zeros((n_non_hp_samples, 5))
+    visitor_data[:, 0] = non_hp_coords_org[:, 0]
+    visitor_data[:, 1] = non_hp_coords_org[:, 1]
+    visitor_data[:, 2] = vistor_opts
+    visitor_data[:, 3] = vistor_opts_org
+    visitor_data[:, 4] = visitor_match
+
+    visitor_data_df = pd.DataFrame(
+        visitor_data,
+        columns=[
+            "LATITUDE",
+            "LONGITUDE",
+            "Host matches (capped)",
+            "Host matches",
+            "Visitor coverage",
+        ],
+    )
+
+    visitor_data_df.to_csv("visitor_df.csv")
+    host_data_df.to_csv("host_df.csv")
+    connections_df.to_csv("connections_df.csv")
+    #         for ind in set(indices):  # remove
+
+    #             same_ind = np.where(indices == ind)
+    #             all_distances = distances[same_ind]
+
+    #             all_distances = all_distances[all_distances < d_max]
+    #             v = all_distances.shape[0]
+    #             v = v if v <= v_max else v_max
+    #             host_array[same_ind] = v
+    #             v_collection.append(v)
+
+    #         max_vis_dict = defaultdict(int)
+
+    #         visitor_array = np.zeros((non_hp_coords.shape[0]))
+
+    #         for i in range(non_hp_coords.shape[0]):
+
+    #             closest_ind = indices[i]
+    #             if max_vis_dict[closest_ind] < v_max:
+    #                 max_vis_dict[closest_ind] +=1
+    #                 visitor_array[i] = 1
 
     # print('Host array', host_array)
     # print('Visitor array', visitor_array)
 
-    capacity = np.sum(v_counts) / n_non_hp_samples
-    coverage = capacity_array.sum() / capacity_array.shape[0]
+    capacity = np.sum(host_opts) / n_non_hp_samples
+    coverage = visitor_match.sum() / visitor_match.shape[0]
+
+    capacity = round(capacity * 100, 2)
+    coverage = round(coverage * 100, 2)
+    over_cap_ratio = round(over_cap_ratio)
 
     print()
     print("Results {}".format(property_type))
     print("=========")
-    print("Capacity: {}%".format(round(capacity * 100, 2)))
-    print("Coverage: {}%".format(round(coverage * 100, 2)))
-    print("Over cap ratio: {}%".format(round(over_cap_ratio)))
+    print("Capacity:\t {}%".format(capacity))
+    print("Coverage: {}%".format(coverage))
+    print("Over cap ratio: {}%".format(over_cap_ratio))
 
-    network = np.zeros((indices.shape[0], 7))
-    network[:, 0] = non_hp_coords_org[:, 0]
-    network[:, 1] = non_hp_coords_org[:, 1]
-    network[:, 2] = hp_set_coords_org[indices][:, 0]
-    network[:, 3] = hp_set_coords_org[indices][:, 1]
-    network[:, 4] = distances
-    network[:, 5] = host_array
-    network[:, 6] = capacity_array
-
-    v_df = pd.DataFrame(
-        v_data, columns=["Counts", "Original counts", "LATITUDE", "LONGITUDE"]
-    )
-    v_df.to_csv("v_data.csv")
-
-    network_df = pd.DataFrame(
-        network,
-        columns=[
-            "non-HP LATITUDE",
-            "non-HP LONGITUDE",
-            "HP LATITUDE",
-            "HP LONGITUDE",
-            "DISTANCE",
-            "# Connections",
-            "Coverage",
-        ],
+    local_auth_output = (
+        " in " + local_auth if local_auth != "all GB (not recommended)" else " in GB"
     )
 
-    network_df["Coverage"] = network_df["Coverage"].astype("bool")
+    output = "Network for {}s{}\n=========\nCapacity:\t{}%\nCoverage:\t{}%\nOver cap ratio:\t{}%".format(
+        property_type, local_auth_output, capacity, coverage, over_cap_ratio
+    )
 
-    network_df.to_csv("network.csv")
+    output = before + "\n\n" + after + "\n\n" + output
+    print(output)
+
+    #         network = np.zeros((indices.shape[0],7))
+    #         network[:,0] = non_hp_coords_org[:,0]
+    #         network[:,1] = non_hp_coords_org[:,1]
+    #         network[:,2] = hp_set_coords_org[indices][:,0]
+    #         network[:,3] = hp_set_coords_org[indices][:,1]
+    #         network[:,4] = distances
+    #         network[:,5] = host_array
+    #         network[:,6] = coverage_array
+
+    #         v_df = pd.DataFrame(v_data, columns = ['Counts', 'Original counts', 'LATITUDE', "LONGITUDE"])
+    #         v_df.to_csv('v_data.csv')
+
+    #         network_df = pd.DataFrame(network, columns=['non-HP LATITUDE', 'non-HP LONGITUDE',
+    #                                                     'HP LATITUDE', 'HP LONGITUDE',
+    #                                                     'DISTANCE',
+    #                                                     '# Connections', 'Coverage',
+
+    #                                                    ])
+
+    #         network_df['Coverage'] = network_df['Coverage'].astype('bool')
+
+    #         network_df.to_csv("network.csv")
+
+    #         network = np.zeros((sources.shape[0], 4))
+    #         network[:,0] = sources[:,0]
+    #         network[:,1] = sources[:,1]
+    #         network[:,2] = targets[:,1]
+    #         network[:,3] = sources[:,2]
+
+    #         network_df = pd.DataFrame(network, columns=['non-HP LATITUDE con', 'non-HP LONGITUDE con',
+    #                                                     'HP LATITUDE con', 'HP LONGITUDE con',
+
+    #                                                    ])
+
+    create_output_map(connections_df, host_data_df, visitor_data_df, settings_string)
+    # map_ = '<html><body><p>You can check out the map <a href="file/Network_for_gradio.html">here</a>.</p></body></html>'
+    map_ = '<iframe src="file/maps/Generated_network_map_{}.html" style="border:0px #ffffff none;" name="myiFrame" scrolling="no" frameborder="1" marginheight="0px" marginwidth="0px" height="600px" width="800px" allowfullscreen></iframe>'.format(
+        settings_string
+    )
+
+    return output, map_
 
 
 # %%
-from keplergl import KeplerGl
-import yaml
+# host_df = pd.read_csv('host_df.csv')
+# visitor_df = pd.read_csv('visitor_df.csv')
+# # connections_df = pd.read_csv('connections_df.csv')
 
-network_df = pd.read_csv("network.csv")
-v_data = pd.read_csv("v_data.csv")
 
-config_file = "network_config.txt"
+# %%
+def create_output_map(connections_df, host_df, visitor_df, settings_string):
+
+    config_file = "network_gradio_config.txt"
+    with open(config_file, "r") as infile:
+        config = infile.read()
+        config = yaml.load(config, Loader=yaml.FullLoader)
+
+    network_map = KeplerGl(height=500, config=config)
+
+    network_map.add_data(data=connections_df, name="Network")
+
+    network_map.add_data(
+        data=host_df[
+            [
+                "LATITUDE",
+                "LONGITUDE",
+                "Visitor matches (capped)",
+                "Visitor matches",
+                "Host coverage",
+            ]
+        ],
+        name="Host homes",
+    )
+
+    network_map.add_data(
+        data=visitor_df[
+            [
+                "LATITUDE",
+                "LONGITUDE",
+                "Host matches (capped)",
+                "Host matches",
+                "Visitor coverage",
+            ]
+        ],
+        name="Visitor homes",
+    )
+
+    network_map.save_to_html(
+        file_name="maps/Generated_network_map_{}.html".format(settings_string)
+    )
+
+
+# network_map
+
+# network_map.save_to_html(
+# file_name="Network_for_gradio.html")
+
+# %%
+
+host_df = pd.read_csv("host_df.csv")
+visitor_df = pd.read_csv("visitor_df.csv")
+connections_df = pd.read_csv("connections_df.csv")
+
+
+config_file = "network_gradio_config.txt"
 with open(config_file, "r") as infile:
     config = infile.read()
     config = yaml.load(config, Loader=yaml.FullLoader)
 
-network_map = KeplerGl(height=500, config=config)
+network_map = KeplerGl(height=500)  # , config=config)
+
+network_map.add_data(data=connections_df, name="Network")
+
 
 network_map.add_data(
-    data=network_df[
+    data=host_df[
         [
-            "non-HP LATITUDE",
-            "non-HP LONGITUDE",
-            "HP LATITUDE",
-            "HP LONGITUDE",
-            "DISTANCE",
+            "LATITUDE",
+            "LONGITUDE",
+            "Visitor matches (capped)",
+            "Visitor matches",
+            "Host coverage",
         ]
     ],
-    name="Network",
+    name="Host homes",
 )
+
 
 network_map.add_data(
-    data=network_df[["non-HP LATITUDE", "non-HP LONGITUDE", "Coverage"]],
-    name="Coverage",
+    data=visitor_df[
+        [
+            "LATITUDE",
+            "LONGITUDE",
+            "Host matches (capped)",
+            "Host matches",
+            "Visitor coverage",
+        ]
+    ],
+    name="Visitor homes",
 )
 
-# network_map.add_data(
-#     data=network_df[['HP LATITUDE', 'HP LONGITUDE',  '# Connections']],
-#     name="Connections")
-
-network_map.add_data(data=v_data[["LATITUDE", "LONGITUDE", "Counts"]], name="Counts")
-
-network_map.add_data(
-    data=v_data[["LATITUDE", "LONGITUDE", "Original counts"]], name="Original counts"
-)
+network_map.save_to_html(file_name="Network_for_gradio.html")
 
 
 network_map
 
-# %%
 
 # %%
-with open("network_config.txt", "w") as outfile:
+with open("network_gradio_config.txt", "w") as outfile:
     outfile.write(str(network_map.config))
 
-network_map.save_to_html(file_name="Network_detached.html")
+network_map.save_to_html(file_name="Network_for_gradio.html")
 
 # %%
-from keplergl import KeplerGl
-import yaml
+local_authorities = list(df["LOCAL_AUTHORITY_LABEL"].unique())
+local_authorities = [
+    "Greenwich",
+    "Manchester",
+    "Glasgow City",
+    "Orkney Islands",
+    "all GB (not recommended)",
+]
 
-network_df = pd.read_csv("network.csv")
-
-config_file = "network_config.txt"
-with open(config_file, "r") as infile:
-    config = infile.read()
-    config = yaml.load(config, Loader=yaml.FullLoader)
-
-network_map = KeplerGl(height=500, config=config)
-
-network_map.add_data(
-    data=network_df[["non-HP LATITUDE", "non-HP LONGITUDE", "Coverage"]],
-    name="Coverage",
+demo = gr.Interface(
+    fn=compute_network_measure,
+    inputs=[
+        gr.inputs.Radio(
+            property_types, label="Property Type", default="Detached House"
+        ),
+        gr.inputs.Radio(
+            [True, False], label="Show home of same property", default=True
+        ),
+        gr.inputs.Slider(0, 100, default=1, step=1, label="Host ratio (%)"),
+        gr.inputs.Slider(0, 100, default=5, step=1, label="Visitor ratio (%)"),
+        gr.inputs.Slider(1, 50, default=10, step=1, label="Max visitors"),
+        gr.inputs.Slider(1, 50, default=3, step=1, label="Open days"),
+        gr.inputs.Slider(1, 50, default=25, step=1, label="Max distance"),
+        gr.inputs.Radio(
+            local_authorities, default="Manchester", label="Local authorities"
+        ),
+    ],
+    outputs=["text", "html"],
+    title="Network of Show Homes",
+    allow_screenshot=True,
 )
 
-# network_map.add_data(
-#     data=network_df[['HP LATITUDE', 'HP LONGITUDE',  '# Connections']],
-#     name="Connections")
+
+demo.launch(share=True)
+
+# %%
+example = '<html><body><p>You can check out the map <a href="Network_detached.html">here</a>.</p></body></html>'
 
 
-network_map
+from IPython.core.display import display, HTML
 
-# %% [markdown]
-# ![Screenshot%202022-07-04%20at%2013.55.39.png](attachment:Screenshot%202022-07-04%20at%2013.55.39.png)
-
-# %% [markdown]
-# ![Screenshot%202022-07-04%20at%2013.59.32.png](attachment:Screenshot%202022-07-04%20at%2013.59.32.png)
+display(HTML(example))
 
 # %%
