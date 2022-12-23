@@ -33,6 +33,7 @@ import gradio as gr
 
 from keplergl import KeplerGl
 import yaml
+
 import asf_core_data
 
 from asf_core_data.getters.epc import epc_data, data_batches
@@ -49,6 +50,8 @@ from asf_core_data.utils.visualisation import easy_plotting, kepler
 
 from asf_core_data.getters.supplementary_data.deprivation import imd_data
 from asf_core_data.utils.visualisation import easy_plotting
+
+from collections import defaultdict
 
 
 import ipywidgets
@@ -89,19 +92,21 @@ EPC_FEAT_SELECTION = [
 ]
 
 epc_df = epc_data.load_preprocessed_epc_data(
-    data_path=LOCAL_DATA_DIR, batch="newest", usecols=EPC_FEAT_SELECTION
+    data_path=LOCAL_DATA_DIR,
+    batch="newest",
+    usecols=EPC_FEAT_SELECTION,
+    version="preprocessed",
 )
 epc_df.shape
 
 # %%
 epc_df_with_MCS = merge_install_dates.manage_hp_install_dates(epc_df)
+
+epc_df_with_MCS.to_csv("epc_df_with_mcs.csv")
 epc_df_with_MCS.head()
 
 # %%
-epc_df_with_MCS = pd.read_csv("epc_df_with_mcs.csv")
-
-# %%
-# epc_df_with_MCS.to_csv('epc_df_with_mcs.csv')
+# epc_df_with_MCS = pd.read_csv('epc_df_with_mcs.csv')
 
 # %%
 imd_df = imd_data.get_gb_imd_data(data_path=LOCAL_DATA_DIR)
@@ -129,40 +134,40 @@ epc_df["HP_INSTALLED"].value_counts(dropna=False, normalize=True)
 # %%
 epc_df["HP_INSTALLED"].value_counts(dropna=False, normalize=False)
 
-# %%
-easy_plotting.plot_subcategory_distribution(
-    visitor_epc_df,
-    "BUILT_FORM",
-    Path(LOCAL_DATA_DIR) / "outputs/figures/",
-    plot_title="Property types for potential visitor homes",
-    y_label="",
-    x_label="",
-    y_ticklabel_type="m",
-    x_tick_rotation=45,
-)
+# %% [markdown]
+# easy_plotting.plot_subcategory_distribution(
+#     visitor_epc_df,
+#     "BUILT_FORM",
+#     Path(LOCAL_DATA_DIR) / "outputs/figures/",
+#     plot_title='Property types for potential visitor homes',
+#     y_label="",
+#     x_label="",
+#     y_ticklabel_type='m',
+#     x_tick_rotation=45,
+# )
 
-# %%
-easy_plotting.plot_subcategory_distribution(
-    epc_df,
-    "BUILT_FORM",
-    Path(LOCAL_DATA_DIR) / "outputs/figures/",
-    plot_title="Property types for potential visitor homes",
-    y_label="",
-    x_label="",
-    y_ticklabel_type="m",
-    x_tick_rotation=45,
-)
+# %% [markdown]
+# easy_plotting.plot_subcategory_distribution(
+#     epc_df,
+#     "BUILT_FORM",
+#     Path(LOCAL_DATA_DIR) / "outputs/figures/",
+#     plot_title='Property types for potential visitor homes',
+#     y_label="",
+#     x_label="",
+#     y_ticklabel_type='m',
+#     x_tick_rotation=45,
+# )
 
-# %%
-easy_plotting.plot_subcats_by_other_subcats(
-    epc_df,
-    "HP_INSTALLED",
-    "BUILT_FORM",
-    Path(LOCAL_DATA_DIR) / "outputs/figures/",
-    plotting_colors="viridis",
-    legend_loc="outside",
-    plot_title="HP status by built form",
-)
+# %% [markdown]
+# easy_plotting.plot_subcats_by_other_subcats(
+#     epc_df,
+#     "HP_INSTALLED",    "BUILT_FORM",
+#
+#     Path(LOCAL_DATA_DIR) / "outputs/figures/",
+#     plotting_colors="viridis",
+#     legend_loc="outside",
+#     plot_title="HP status by built form",
+# )
 
 # %%
 coord_df = coordinates.get_postcode_coordinates(data_path=LOCAL_DATA_DIR)
@@ -175,6 +180,30 @@ epc_df = epc_df.rename(columns={"Postcode": "POSTCODE"})
 epc_df = pd.merge(epc_df, coord_df, on=["POSTCODE"], how="left")
 print(epc_df.shape)
 
+epc_df.to_csv("epc_for_show_homes.csv")
+
+# %%
+epc_df = pd.read_csv("epc_for_show_homes.csv")
+
+# %%
+epc_df.shape
+
+# %%
+# df.loc[df['HP_INSTALLED']].shape
+
+# %%
+# .loc[~df['HP_INSTALLED'] & visitor_cond].shape
+
+# %%
+visitor_cond = (
+    (epc_df["TENURE"] == "owner-occupied")
+    & (epc_df["CURRENT_ENERGY_RATING"].isin(["E", "D", "C"]))
+    & (epc_df["IMD Decile"] >= 5)
+    & (~epc_df["HP_INSTALLED"])
+)
+
+visitor_epc_df = epc_df.loc[visitor_cond]
+
 # %%
 hp_props = epc_df.loc[epc_df["HP_INSTALLED"]]
 hp_props.shape
@@ -182,23 +211,6 @@ hp_props.shape
 # %%
 visitor_epc_df = epc_df.loc[visitor_cond]
 print(visitor_epc_df.shape)
-
-# %%
-from keplergl import KeplerGl
-import yaml
-
-network_map = KeplerGl(height=500)  # , config=config)
-
-network_map.add_data(data=hp_props[["LONGITUDE", "LATITUDE"]], name="Heat pump homes")
-
-network_map.add_data(
-    data=visitor_epc_df[["LONGITUDE", "LATITUDE"]], name="Visitor homes"
-)
-
-network_map
-
-# %%
-network_map.save_to_html(file_name="network_test2.html")
 
 # %%
 from scipy.spatial.distance import cdist
@@ -249,12 +261,19 @@ terraced_house = (df["PROPERTY_TYPE"] == "House") & (df["BUILT_FORM"].isin(terra
 detached_house = (df["PROPERTY_TYPE"] == "House") & (df["BUILT_FORM"] == "Detached")
 semi_house = (df["PROPERTY_TYPE"] == "House") & (df["BUILT_FORM"] == "Semi-Detached")
 
-property_types = ["Flat", "Semi-detached house", "Detached House", "Terraced House"]
+property_types = [
+    "Flat",
+    "Semi-detached house",
+    "Detached House",
+    "Terraced House",
+    "Any",
+]
 cond_dict = {
     "Flat": flat,
     "Semi-detached house": semi_house,
     "Detached House": detached_house,
     "Terraced House": terraced_house,
+    "Any": no_cond,
 }
 
 df = df[df["LATITUDE"].notna()]
@@ -274,9 +293,6 @@ def prepare_coords(df):
     return coords, coords_org
 
 
-from collections import defaultdict
-
-
 local_authorities = df["LOCAL_AUTHORITY_LABEL"].unique()
 
 host_ratio_widget = FloatSlider(min=0.0, max=100.0, step=1, value=1)
@@ -288,7 +304,7 @@ d_max_widget = FloatSlider(min=0, max=50, step=1, value=25)
 
 LA_widget = ipywidgets.SelectMultiple(
     options=local_authorities,
-    value=[],
+    value=["Glasgow City"],
     # rows=10,
     description="Local authorities",
     disabled=False,
@@ -323,8 +339,18 @@ def compute_network_measure(
     host_ratio = host_ratio / 100
     vistor_ratio = vistor_ratio / 100
 
-    local_auth_str = local_auth if local_auth != "all GB (not recommended)" else "ßßGB"
+    # local_auth_str = local_auth if local_auth != 'all GB (not recommended)' else 'GB'
+    local_auth_str = local_auth  # if type(local_auth) == tuple else 'GB'
+    local_auth = local_auth_str
     print(local_auth)
+    print(vistor_ratio)
+    print(property_type)
+    print(host_ratio)
+    print(v_max)
+    print(d_max)
+    print(local_auth_str)
+    print(property_type)
+    print(str(same_prop_type))
 
     settings_string = (
         property_type
@@ -336,14 +362,18 @@ def compute_network_measure(
         + local_auth_str
     )
 
-    non_hp_samples = df.loc[~df["HP_INSTALLED"] & conds]
+    non_hp_samples = df.loc[~df["HP_INSTALLED"] & conds & visitor_epc_df]
     hp_samples = df.loc[df["HP_INSTALLED"]]
     hp_same_type_samples = df.loc[df["HP_INSTALLED"] & conds]
 
-    if local_auth != "all GB (not recommended)":
+    print(local_auth)
+
+    # Visitors only for given local authority
+    if local_auth != "GB":
         non_hp_samples = non_hp_samples.loc[
-            non_hp_samples["LOCAL_AUTHORITY_LABEL"].isin([local_auth])
+            non_hp_samples["LOCAL_AUTHORITY_LABEL"] == local_auth
         ]
+        # non_hp_samples = non_hp_samples.loc[non_hp_samples['LOCAL_AUTHORITY_LABEL'].isin([local_auth])]
         # hp_samples = non_hp_samples.loc[hp_samples['LOCAL_AUTHORITY_LABEL'].isin(local_auth)]
         # hp_same_type_samples = hp_same_type_samples.loc[hp_samples['LOCAL_AUTHORITY_LABEL'].isin(local_auth)]
 
@@ -355,6 +385,7 @@ def compute_network_measure(
     before = "Overall situation:\n# Props without HPs: {}\n# Props with HPs: {}\n# Similar props with with HPs: {}".format(
         non_hp_samples.shape[0], hp_samples.shape[0], hp_same_type_samples.shape[0]
     )
+    # Sample visitor and host homes
     n_non_hp_samples = int(non_hp_samples.shape[0] * vistor_ratio)
     n_hp_samples = int(hp_samples.shape[0] * host_ratio)
     n_hp_same_type_samples = int(hp_same_type_samples.shape[0] * host_ratio)
@@ -374,47 +405,51 @@ def compute_network_measure(
     after = "After subsampling:\n# Props without HPs: {}\n# Props with HPs: {}\n# Similar props with HPs: {}".format(
         non_hp_samples.shape[0], hp_samples.shape[0], hp_same_type_samples.shape[0]
     )
+    # Get coordinates (cartesian and original)
     non_hp_coords, non_hp_coords_org = prepare_coords(non_hp_samples)
     hp_coords, hp_coords_org = prepare_coords(hp_samples)
     sim_hp_coords, sim_hp_coords_org = prepare_coords(hp_same_type_samples)
 
-    print(local_auth)
-    if local_auth != "all GB (not recommended)":
-        out_of_la_all = np.array(
-            ~hp_samples["LOCAL_AUTHORITY_LABEL"].isin([local_auth])
-        )
+    # Get Bool array for whether hosts are out of LA
+    if local_auth != "GB":
+        out_of_la_all = np.array(~(hp_samples["LOCAL_AUTHORITY_LABEL"] == local_auth))
         out_of_la_sim = np.array(
-            ~hp_same_type_samples["LOCAL_AUTHORITY_LABEL"].isin([local_auth])
+            ~(hp_same_type_samples["LOCAL_AUTHORITY_LABEL"] == local_auth)
         )
         out_of_la_dict = {"any": out_of_la_all, "similar": out_of_la_sim}
 
+    # Dictionary for two scenarios
     hp_prop_dict = {"any": hp_coords, "similar": sim_hp_coords}
     org_coords_dict = {"any": hp_coords_org, "similar": sim_hp_coords_org}
 
     version = "similar" if same_prop_type else "any"
 
+    # Coordinates for similar or any hp properties
     hp_set_coords = hp_prop_dict[version]
     hp_set_coords_org = org_coords_dict[version]
     n_hp_props = hp_set_coords_org.shape[0]
 
-    tree = spatial.KDTree(hp_set_coords)  # remove
-    distances, indices = tree.query(non_hp_coords)  # remove
+    #         tree = spatial.KDTree(hp_set_coords) # remove
+    #         distances, indices = tree.query(non_hp_coords) # remove
+    #         v_collection = [] # remove
+    #         host_array = np.zeros((indices.shape[0])) # remove
 
-    v_collection = []  # remove
-    host_array = np.zeros((indices.shape[0]))  # remove
-
+    # Host and visitor tree
     host_tree = spatial.KDTree(hp_set_coords)
     visitor_tree = spatial.KDTree(non_hp_coords)
-    v_counts_old = host_tree.count_neighbors(
-        visitor_tree, r=d_max, cumulative=False
-    )  # remove
+    # v_counts_old = host_tree.count_neighbors(visitor_tree, r=d_max, cumulative=False) # remove
     match_indices = host_tree.query_ball_tree(visitor_tree, r=d_max)
 
+    # Matches (from host view) before capping
     host_opts_org = np.array([[len(x) for x in match_indices]])[0]
+
+    print(np.array([[len(x) for x in match_indices]]).shape)
+    print(np.array([[len(x) for x in match_indices]])[0].shape)
 
     filter_host_data = False
     zero_game = False
 
+    # Catch if no matches at all: use zero arrays instead
     if not [x for xs in match_indices for x in xs]:
 
         vistor_opts_org = np.zeros(n_non_hp_samples).astype(int)
@@ -429,15 +464,19 @@ def compute_network_measure(
 
     else:
 
-        org_indices_counts = np.array([x for xs in match_indices for x in xs])[0]
+        print("All match indices")
+        org_indices_counts = np.array([x for xs in match_indices for x in xs])
 
+        # unique_vis_homes, vis_homes_counts
         unique_values, unique_counts = np.unique(org_indices_counts, return_counts=True)
+
         vistor_opts_org = np.zeros(n_non_hp_samples)
         vistor_opts_org[unique_values] = unique_counts
 
-        v_counts = np.array([[len(x) for x in match_indices]])  # remove
-        original_v_counts = v_counts.copy()  # remove
+        #             v_counts = np.array([[len(x) for x in match_indices]]) #remove
+        #             original_v_counts = v_counts.copy() #remove
 
+        # Cap at v max
         upd_match_indices = []
         for i, host_matches in enumerate(match_indices):
             upd_match_indices.append(
@@ -461,15 +500,12 @@ def compute_network_measure(
         visitor_match = np.zeros((n_non_hp_samples))
         visitor_match[upd_match_indices_unique] = 1
 
-        print(visitor_match.shape)
-
-        print(host_opts.shape)
-        print(host_opts_org.shape)
-
-        if local_auth != "all GB (not recommended)":
+        if local_auth != "GB":
             out_of_la = out_of_la_dict[version]
             host_w_match = host_opts > 0
-            n_countable_hp_props = (~out_of_la | host_w_match).sum()
+            n_countable_hp_props = (
+                ~out_of_la | host_w_match
+            ).sum()  # only counts props within LA or with match
             show_home_filter = ~out_of_la | host_w_match
             filter_host_data = True
         else:
@@ -620,9 +656,8 @@ def compute_network_measure(
     print("Coverage: {}%".format(coverage))
     print("Over cap ratio: {}%".format(over_cap_ratio))
 
-    local_auth_output = (
-        " in " + local_auth if local_auth != "all GB (not recommended)" else " in GB"
-    )
+    local_auth_output = " in " + local_auth if local_auth != "GB" else " in GB"
+    local_auth_output = local_auth_str
 
     output = "Network for {}s{}\n=========\nCapacity:\t{}%\nCoverage:\t{}%\nOver cap ratio:\t{}%".format(
         property_type, local_auth_output, capacity, coverage, over_cap_ratio
@@ -733,9 +768,19 @@ def create_output_map(connections_df, host_df, visitor_df, settings_string):
 host_df = pd.read_csv("host_df.csv")
 visitor_df = pd.read_csv("visitor_df.csv")
 connections_df = pd.read_csv("connections_df.csv")
+settings_string = "xxx"
+
+create_output_map(connections_df, host_df, visitor_df, settings_string)
+
+# %%
+
+host_df = pd.read_csv("host_df.csv")
+visitor_df = pd.read_csv("visitor_df.csv")
+connections_df = pd.read_csv("connections_df.csv")
 
 
 config_file = "network_gradio_config.txt"
+config_file = "network_config.txt"
 with open(config_file, "r") as infile:
     config = infile.read()
     config = yaml.load(config, Loader=yaml.FullLoader)
@@ -786,13 +831,7 @@ network_map.save_to_html(file_name="Network_for_gradio.html")
 
 # %%
 local_authorities = list(df["LOCAL_AUTHORITY_LABEL"].unique())
-local_authorities = [
-    "Greenwich",
-    "Manchester",
-    "Glasgow City",
-    "Orkney Islands",
-    "all GB (not recommended)",
-]
+# local_authorities = ['Manchester', 'Glasgow City', 'Orkney Islands', 'Edinburgh', 'GB']
 
 demo = gr.Interface(
     fn=compute_network_measure,
@@ -805,10 +844,10 @@ demo = gr.Interface(
         ),
         gr.inputs.Slider(0, 100, default=1, step=1, label="Host ratio (%)"),
         gr.inputs.Slider(0, 100, default=5, step=1, label="Visitor ratio (%)"),
-        gr.inputs.Slider(1, 50, default=10, step=1, label="Max visitors"),
-        gr.inputs.Slider(1, 50, default=3, step=1, label="Open days"),
-        gr.inputs.Slider(1, 50, default=25, step=1, label="Max distance"),
-        gr.inputs.Radio(
+        gr.inputs.Slider(1, 50, default=5, step=1, label="Max visitors"),
+        gr.inputs.Slider(1, 50, default=6, step=1, label="Number of slots/open days"),
+        gr.inputs.Slider(1, 50, default=35, step=1, label="Max distance"),
+        gr.inputs.Dropdown(
             local_authorities, default="Manchester", label="Local authorities"
         ),
     ],
@@ -816,7 +855,6 @@ demo = gr.Interface(
     title="Network of Show Homes",
     allow_screenshot=True,
 )
-
 
 demo.launch(share=True)
 
@@ -827,5 +865,7 @@ example = '<html><body><p>You can check out the map <a href="Network_detached.ht
 from IPython.core.display import display, HTML
 
 display(HTML(example))
+
+# %%
 
 # %%
