@@ -19,7 +19,8 @@ def get_travel_distance_and_duration(coords_1, coords_2):
     r = requests.get(
         f"http://router.project-osrm.org/route/v1/car/{lon_1},{lat_1};{lon_2},{lat_2}?overview=false"
         ""
-    )  # then you load the response using the json libray
+    )
+
     routes = json.loads(r.content)
     if routes.get("routes") is None:
         return None
@@ -28,7 +29,7 @@ def get_travel_distance_and_duration(coords_1, coords_2):
     duration = route_1["duration"] / 60
     distance = route_1["distance"] / 1000
 
-    return distance, duration
+    return duration, distance
 
 
 def to_Cartesian(lat, lng):
