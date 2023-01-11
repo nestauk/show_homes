@@ -456,14 +456,7 @@ def compute_network_measure(
     host_homes = host_homes if version == "any" else host_homes_similar
 
     # # Sample visitor and host homes
-    (
-        visitor_homes,
-        host_homes,
-        n_visitor_samples,
-        n_host_samples,
-        pre_samp_text,
-        post_samp_text,
-    ) = get_samples(
+    sample_outputs = get_samples(
         visitor_homes,
         host_homes,
         host_ratio,
@@ -472,6 +465,10 @@ def compute_network_measure(
         d_max,
         verbose=True,
     )
+
+    visitor_homes, host_homes = sample_outputs[:2]
+    n_visitor_samples, n_host_samples = sample_outputs[2:4]
+    pre_samp_text, post_samp_text = sample_outputs[4:]
 
     # Get coordinates (cartesian and original)
     coords_dict = get_coordinates(visitor_homes, host_homes)
@@ -485,156 +482,6 @@ def compute_network_measure(
 
     host_df = host_data[-1]
     visitor_df = visitor_data[-1]
-
-    # # Host and visitor tree
-    # host_tree = spatial.KDTree(coords_dict['host cart'])
-    # visitor_tree = spatial.KDTree(coords_dict['visitor cart'])
-
-    # # Nested list: for each host, which visitor idx are matches
-    # host_vis_match_idx = host_tree.query_ball_tree(visitor_tree, r=d_max)
-
-    # # Catch any matches
-    # if [x for xs in host_vis_match_idx for x in xs]:
-
-    #     host_opts_pre_cap, visitor_opts_pre_cap = get_host_visitor_matches(
-    #         host_vis_match_idx, n_visitor_samples
-    #     )
-
-    #     # This is sadly the simplest way to randomly sample without triggering an error if there are less than 5 to begin with and without creating a new variable
-    #     capped_match_idx = [
-    #         random.sample(host_matches, len(host_matches))[:v_max]
-    #         for host_matches in host_vis_match_idx
-    #     ]
-    #     host_opts_post_cap, visitor_opts_post_cap = get_host_visitor_matches(
-    #         capped_match_idx, n_visitor_samples
-    #     )
-    #     n_valid_hp_props = host_opts_pre_cap.shape[0]
-
-    # # If there are no matched, fill in with zeros
-    # else:
-    #     visitor_opts_pre_cap = np.zeros(n_visitor_samples).astype(int)
-    #     visitor_opts_post_cap = np.zeros(n_visitor_samples).astype(int)
-
-    #     host_opts_post_cap = np.zeros(n_host_samples).astype(int)
-    #     host_opts_pre_cap = np.zeros(n_host_samples).astype(int)
-
-    #     n_valid_hp_props = n_host_samples
-    #     capped_match_idx = []
-
-    # over_cap_ratio = (
-    #     np.count_nonzero(host_opts_pre_cap >= v_max) / n_valid_hp_props * 100
-    # )
-    # connections = np.zeros((n_valid_hp_props * v_max, 5))
-
-    # counter = 0
-
-    # for i in range(host_opts_post_cap.shape[0]):
-
-    #     m = host_opts_post_cap[i]
-
-    #     for j in range(m):
-
-    #         dist = round(
-    #             geopy.distance.distance(
-    #                 host_coords_org[i], visitor_coords_org[capped_match_idx[i][j]]
-    #             ).km,
-    #             1,
-    #         )
-
-    #         connections[counter, :2] = host_coords_org[i]
-    #         connections[counter, 2:4] = visitor_coords_org[capped_match_idx[i][j]]
-    #         connections[counter, 4] = dist
-
-    #         counter += 1
-
-    # # Remove all zero rows
-    # connections = connections[~np.all(connections == 0, axis=1)]
-
-    # connections_df = pd.DataFrame(
-    #     connections,
-    #     columns=[
-    #         "LATITUDE source",
-    #         "LONGITUDE source",
-    #         "LATITUDE target",
-    #         "LONGITUDE target",
-    #         "Distance",
-    #     ],
-    # )
-
-    # host_data = np.zeros((n_valid_hp_props, 5))
-    # host_data[:, 0:2] = host_coords_org[:, 0:2]
-    # host_data[:, 2] = host_opts_post_cap
-    # host_data[:, 3] = host_opts_pre_cap
-    # host_data[:, 4] = host_opts_post_cap > 0
-
-    # host_data_df = pd.DataFrame(
-    #     host_data,
-    #     columns=[
-    #         "LATITUDE",
-    #         "LONGITUDE",
-    #         "Visitor matches (capped)",
-    #         "Visitor matches",
-    #         "Matched",
-    #     ],
-    # )
-
-    # visitor_data = np.zeros((n_visitor_samples, 5))
-    # visitor_data[:, 0:2] = visitor_coords_org[:, 0:2]
-    # visitor_data[:, 2] = visitor_opts_post_cap
-    # visitor_data[:, 3] = visitor_opts_pre_cap
-    # visitor_data[:, 4] = visitor_opts_post_cap > 0
-
-    # visitor_data_df = pd.DataFrame(
-    #     visitor_data,
-    #     columns=[
-    #         "LATITUDE",
-    #         "LONGITUDE",
-    #         "Host matches (capped)",
-    #         "Host matches",
-    #         "Matched",
-    #     ],
-    # )
-
-    # visitor_data_df.to_csv("visitor_df.csv")
-    # host_data_df.to_csv("host_df.csv")
-    # connections_df.to_csv("connections_df.csv")
-
-    # visitor_matches = visitor_opts_post_cap > 0
-    # host_matches = host_opts_post_cap > 0
-    # capacity_host = np.sum(host_opts_post_cap) / n_valid_hp_props
-    # capacity_visitor = np.sum(visitor_opts_post_cap) / n_visitor_samples
-    # coverage_visitor = visitor_matches.sum() / visitor_matches.shape[0]
-    # coverage_host = host_matches.sum() / host_matches.shape[0]
-
-    # capacity_host = round(capacity_host, 2)
-    # capacity_visitor = round(capacity_visitor, 2)
-    # coverage_visitor = round(coverage_visitor * 100, 2)
-    # coverage_host = round(coverage_host * 100, 2)
-    # over_cap_ratio = round(over_cap_ratio)
-
-    # print()
-    # print("Results {}".format(property_type))
-    # print("=========")
-    # print("Host capacity:\t {}".format(capacity_host))
-    # print("Visitor capacity:\t {}".format(capacity_visitor))
-    # print("Visitor coverage: {}%".format(coverage_visitor))
-    # print("Host coverage: {}%".format(coverage_host))
-    # print("Over cap ratio: {}%".format(over_cap_ratio))
-
-    # local_auth_output = " in " + local_auth if local_auth != "GB" else " in GB"
-    # property_type = property_type if property_type != "Any" else "any propertie"
-
-    # output = "Network for {}s{}\n=========\nAverage visitor matches for show homes:\t{}\nAverage host matches for visitor homes:\t{}\n\Host Coverage:\t{}%\nVisitor Coverage:\t{}%\nOver cap ratio:\t{}%".format(
-    #     property_type,
-    #     local_auth_output,
-    #     network_metrics['capacity host'],
-    #     network_metrics['capacity visitor'],
-    #     network_metrics['coverage host'],
-    #     network_metrics['coverage visitor'],,
-    #     network_metrics['over cap ratio'],,
-    # )
-
-    # output = pre_samp_text + "\n\n" + post_samp_text + "\n\n" + output
 
     text_output = prepare_textual_output(
         local_auth, property_type, network_metrics, pre_samp_text, post_samp_text
