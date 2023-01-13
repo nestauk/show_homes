@@ -1,9 +1,14 @@
+# File: show_homes/utils/geo_utils
+"""
+Utils for handling geographical data.
+
+Project: Show homes
+Author: Julia Suter
+"""
+
 import numpy as np
 import requests
 import json
-
-from scipy.spatial.distance import cdist
-from geopy.distance import distance as geodist  # avoid naming confusion
 
 
 def get_travel_distance_and_duration(coords_1, coords_2):
@@ -56,7 +61,7 @@ def to_Cartesian(lat, lng):
     return np.array((x, y, z)).T
 
 
-def prepare_coords(df):
+def prepare_coords(coords):
     """_summary_
 
     Args:
@@ -66,8 +71,7 @@ def prepare_coords(df):
         _type_: _description_
     """
 
-    coords_org = df[["LATITUDE", "LONGITUDE"]].to_numpy()
-    coords = coords_org.copy()
+    coords_org = coords.copy()
 
     # Convert to Cartesian coordinates
     coords = np.deg2rad(coords)

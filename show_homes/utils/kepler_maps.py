@@ -1,27 +1,32 @@
+# File: show_homes/utils/kepler_maps
+"""
+Create Kepler map for show home models.
+
+Project: Show homes
+Author: Julia Suter
+"""
+
 import yaml
 
 import pandas as pd
 from keplergl import KeplerGl
 
-from show_homes import PROJECT_DIR
-
-MODEL_MAP_OUTPUT_PATH = PROJECT_DIR / "show_homes/analysis/maps/"
-KEPLER_MODEL_NET_CONFIG = PROJECT_DIR / "outputs/maps/config/network_gradio_config.txt"
+from show_homes.config import config
 
 
-def add_fake_hosts_and_visitors(host_df, visitor_df):
+def add_fake_hosts_and_visitors(visitor_df, host_df):
     """Add two fake hosts and visitors to map (located in Australia)
     to account for the edge case of all hosts or all visitors being
     matched/unmatched, resulting in inconsistent color assingments to
     'yes' and 'no' categories in the Kepler maps.
 
     Args:
-        host_df (pandas.DataFrame): All hosts.
         visitor_df (pandas.DataFrame): All visitors.
+        host_df (pandas.DataFrame): All hosts.
 
     Returns:
-        host_df (pandas.DataFrame): Hosts + 2 fake entries.
         visitor_df (pandas.DataFrame): Visitors + 2 fake entries.
+        host_df (pandas.DataFrame): Hosts + 2 fake entries.
     """
 
     fake_host_1 = pd.DataFrame(
@@ -73,25 +78,39 @@ def add_fake_hosts_and_visitors(host_df, visitor_df):
         drop=True
     )
 
-    return host_df, visitor_df
+    return visitor_df, host_df
 
 
-def create_output_map(connections_df, host_df, visitor_df, settings_string):
+def create_output_map(
+    connections_df,
+    visitor_df,
+    host_df,
+    settings_string,
+    map_name=config.GRADIO_OUT_MAP_NAME,
+):
+    """Create an output map for the modelled show home network.
 
-    with open(KEPLER_MODEL_NET_CONFIG, "r") as infile:
-        config = infile.read()
-        config = yaml.load(config, Loader=yaml.FullLoader)
+    Args:
+        connections_df (pd.DataFrame): Data about connections between visitor and host homes.
+        visitor_df (pd.DataFrame): Visitor homes.
+        host_df (pd.DataFrame): Host homes.
+        settings_string (str): String describing settings/parameters.
+    """
+
+    with open(config.GRADIO_KEPLER_CONFIG, "r") as infile:
+        kepler_config = infile.read()
+        kepler_config = yaml.load(kepler_config, Loader=yaml.FullLoader)
 
     # Map Booleans/ints to categories for better readability
     map_dict = {0.0: "no", 1.0: "yes"}
-    host_df["Matched"] = host_df["Matched"].map(map_dict)
     visitor_df["Matched"] = visitor_df["Matched"].map(map_dict)
+    host_df["Matched"] = host_df["Matched"].map(map_dict)
 
     # Add fake coordinates in Australia to make sure all categories are included.
     # Otherwise, color map might not be consistent across different exampels.
-    host_df, visitor_df = add_fake_hosts_and_visitors(host_df, visitor_df)
+    visitor_df, host_df = add_fake_hosts_and_visitors(visitor_df, host_df)
 
-    network_map = KeplerGl(height=500, config=config)
+    network_map = KeplerGl(height=500, config=kepler_config)
 
     network_map.add_data(data=connections_df, name="Network")
 
@@ -121,6 +140,5 @@ def create_output_map(connections_df, host_df, visitor_df, settings_string):
         name="Visitor homes",
     )
 
-    map_name = "Generated_network_map_{}.html".format(settings_string)
-
-    network_map.save_to_html(file_name=MODEL_MAP_OUTPUT_PATH / map_name)
+    map_name = map_name.format(settings_string)
+    network_map.save_to_html(file_name=config.GRADIO_OUT_MAPS_PATH / map_name)
