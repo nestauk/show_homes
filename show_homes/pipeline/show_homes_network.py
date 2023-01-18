@@ -16,6 +16,10 @@ import gradio as gr
 from show_homes.config import config
 from show_homes.utils import geo_utils, kepler_maps
 
+from geopy.distance import distance
+
+random.seed(42)
+
 
 prop_type_dict = {
     "Flat": (
@@ -262,6 +266,8 @@ def get_visitor_host_matches(coords_dict, d_max, v_max):
             host_vis_match_idx, n_visitor_samples
         )
 
+        random.seed(42)
+
         # This is sadly the simplest way to randomly sample without triggering an error if there are less than 5 to begin with and without creating a new variable
         capped_match_idx = [
             random.sample(host_matches, len(host_matches))[:v_max]
@@ -283,34 +289,56 @@ def get_visitor_host_matches(coords_dict, d_max, v_max):
         n_valid_hp_props = n_host_samples
         capped_match_idx = []
 
-    # TODO:  Vectorise
+    # connections = np.zeros((host_opts_post_cap.sum(), 7))
 
-    connections = np.zeros((n_valid_hp_props * v_max, 5))
+    # counter=0
+    # for i in range(host_opts_post_cap.shape[0]):
+    #     m = host_opts_post_cap[i]
+
+    #     for j in range(m):
+
+    #         dist = round(distance(
+    #                 coords_dict["host org"][i],
+    #                 coords_dict["visitor org"][capped_match_idx[i][j]],
+    #             ).km,1)
+
+    #         connections[counter, :2] = coords_dict["host org"][i]
+    #         connections[counter, 2:4] = coords_dict["visitor org"][
+    #             capped_match_idx[i][j]
+    #         ]
+    #         connections[counter, 4] = dist
+
+    #         counter += 1
+
+    # # print(connections[:5,:2])
+    # # print(connections[:5,2:4])
+    # # print(connections[-5:,:2])
+    # # print(connections[-5:,2:4])
+    # print(connections[:,4])
+
+    connections = np.zeros((host_opts_post_cap.sum(), 5))
 
     counter = 0
     for i in range(host_opts_post_cap.shape[0]):
         m = host_opts_post_cap[i]
 
-        for j in range(m):
+        # print(m)
+        assert len(capped_match_idx[i]) == m
 
-            dist = round(
-                geopy.distance.distance(
-                    coords_dict["host org"][i],
-                    coords_dict["visitor org"][capped_match_idx[i][j]],
-                ).km,
-                1,
-            )
+        connections[counter : counter + m, :2] = coords_dict["host org"][i]
+        connections[counter : counter + m, 2:4] = coords_dict["visitor org"][
+            capped_match_idx[i]
+        ]
 
-            connections[counter, :2] = coords_dict["host org"][i]
-            connections[counter, 2:4] = coords_dict["visitor org"][
-                capped_match_idx[i][j]
-            ]
-            connections[counter, 4] = dist
+        counter += m
 
-            counter += 1
+    connections[:, 4] = geo_utils.distance(
+        connections[:, :2], connections[:, 2:4]
+    ).round(1)
 
-    # Remove all zero rows
-    connections = connections[~np.all(connections == 0, axis=1)]
+    # from scipy.spatial.distance import cdist
+    # from geopy.distance import distance as geodist # avoid naming confusion
+    # connections[:,4] = cdist(connections[:,:2], connections[:,2:4], lambda u, v: geodist(u, v).km)[np.eye(connections.shape[0], dtype=bool)].round(1) # you can choose unit here
 
     visitor_data = [n_visitor_samples, visitor_opts_post_cap, visitor_opts_pre_cap]
     host_data = [n_valid_hp_props, host_opts_post_cap, host_opts_pre_cap]
