@@ -78,3 +78,31 @@ def prepare_coords(coords):
     coords_cart = to_Cartesian(coords[:, 0], coords[:, 1])
 
     return coords_cart, coords_org
+
+
+def distance(coords_1, coords_2):
+    """Lat/long input
+
+    Args:
+        coords_1 (_type_): _description_
+        coords_2 (_type_): _description_
+    """
+
+    rad_coords_1 = np.radians(coords_1)
+    rad_coords_2 = np.radians(coords_2)
+
+    # Haversine formula
+    dlon = rad_coords_2[:, 1] - rad_coords_1[:, 1]
+    dlat = rad_coords_2[:, 0] - rad_coords_1[:, 0]
+
+    a = (
+        np.sin(dlat / 2) ** 2
+        + np.cos(rad_coords_1[:, 0])
+        * np.cos(rad_coords_2[:, 0])
+        * np.sin(dlon / 2) ** 2
+    )
+
+    c = 2 * np.arcsin(np.sqrt(a))
+    r = 6371.009
+
+    return c * r
