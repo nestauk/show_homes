@@ -106,3 +106,7 @@ def distance(coords_1, coords_2):
     r = 6371.009
 
     return c * r
+
+    # from scipy.spatial.distance import cdist
+    # from geopy.distance import distance as geodist # avoid naming confusion
+    # connections[:,4] = cdist(connections[:,:2], connections[:,2:4], lambda u, v: geodist(u, v).km)[np.eye(connections.shape[0], dtype=bool)].round(1) # you can choose unit here

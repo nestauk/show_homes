@@ -289,33 +289,6 @@ def get_visitor_host_matches(coords_dict, d_max, v_max):
         n_valid_hp_props = n_host_samples
         capped_match_idx = []
 
-    # connections = np.zeros((host_opts_post_cap.sum(), 7))
-
-    # counter=0
-    # for i in range(host_opts_post_cap.shape[0]):
-    #     m = host_opts_post_cap[i]
-
-    #     for j in range(m):
-
-    #         dist = round(distance(
-    #                 coords_dict["host org"][i],
-    #                 coords_dict["visitor org"][capped_match_idx[i][j]],
-    #             ).km,1)
-
-    #         connections[counter, :2] = coords_dict["host org"][i]
-    #         connections[counter, 2:4] = coords_dict["visitor org"][
-    #             capped_match_idx[i][j]
-    #         ]
-    #         connections[counter, 4] = dist
-
-    #         counter += 1
-
-    # # print(connections[:5,:2])
-    # # print(connections[:5,2:4])
-    # # print(connections[-5:,:2])
-    # # print(connections[-5:,2:4])
-    # print(connections[:,4])
-
     connections = np.zeros((host_opts_post_cap.sum(), 5))
 
     counter = 0
@@ -335,10 +308,6 @@ def get_visitor_host_matches(coords_dict, d_max, v_max):
     connections[:, 4] = geo_utils.distance(
         connections[:, :2], connections[:, 2:4]
     ).round(1)
-
-    # from scipy.spatial.distance import cdist
-    # from geopy.distance import distance as geodist # avoid naming confusion
-    # connections[:,4] = cdist(connections[:,:2], connections[:,2:4], lambda u, v: geodist(u, v).km)[np.eye(connections.shape[0], dtype=bool)].round(1) # you can choose unit here
 
     visitor_data = [n_visitor_samples, visitor_opts_post_cap, visitor_opts_pre_cap]
     host_data = [n_valid_hp_props, host_opts_post_cap, host_opts_pre_cap]
