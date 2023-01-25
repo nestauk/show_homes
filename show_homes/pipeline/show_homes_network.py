@@ -178,6 +178,10 @@ def get_samples(
     n_visitor_samples = int(n_original_visitor_homes * visitor_ratio)
     visitor_homes = visitor_homes.sample(frac=1, random_state=42)[:n_visitor_samples]
 
+    # In case no visitors are left applying visitor ratio
+    if n_visitor_samples == 0:
+        return visitor_homes, host_homes, "", ""
+
     # Get coordinates
     coords_dict = get_coordinates(visitor_homes, host_homes)
 
