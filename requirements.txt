@@ -9,3 +9,5 @@ asf_core_data@git+ssh://git@github.com/nestauk/asf_core_data.git@19_epc_from_s3
 boto3==1.26.56
 botocore==1.29.56
 awscli==0.11.0
+seaborn==0.11.2 
+geopy==2.2.0
