@@ -38,18 +38,36 @@ Future research may include an agent-based model that investigates and models ho
 - Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter/quickstart), in brief:
   - Install: `git-crypt`, `direnv`, and `conda`
   - Have a Nesta AWS account configured with `awscli`
-- Run `make install` to configure the development environment:
-
-  - Setup the conda environment
-  - Configure pre-commit
-  - Configure metaflow to use AWS
-
-- Download the inputs and outputs
 
 ```
+git clone https://github.com/nestauk/show_homes.git
+cd show_homes
+git checkout 2_average_distance_map
+make install
+```
+
+`make install` may take a while and finally throw an error for AWS+Metaflow like below, but that's fine.
+
+```
+May throw error at megaflop Configuring Metaflow + AWSAWS + Metaflow setup failed, check .cookiecutter/state/setup-metaflow for more info
+make: *** [.cookiecutter/state/setup-metaflow] Error 1
+```
+
+Next, change env and download the necessary files:
+
+```
+conda activate show_homes
 aws s3 sync s3://asf-show-homes/inputs ./inputs
-aws s3 sync s3://asf-show-homes/outputs ./outputs
+aws s3 sync s3://asf-show-homes/outputs/data ./outputs/data
 ```
+
+If this throws an error like `ModuleNotFoundError: No module named 'bcdoc.mangen'`, try:
+
+```
+pip install --upgrade awscli
+```
+
+Otherwise, you can manually download the necessary files from the S3 bucket named `asf-show-homes`.
 
 ## Contributor guidelines
 
