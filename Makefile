@@ -33,8 +33,8 @@ test-setup:
 	@# Pre-commit valid
 	@$(call execute_in_env, pre-commit run -a)
 
-	@# Metaflow
-	@$(call execute_in_env, python .cookiecutter/scripts/check_metaflow_aws.py || echo "ERROR: Metaflow+AWS configuration")
+	#@# Metaflow
+	#@$(call execute_in_env, python .cookiecutter/scripts/check_metaflow_aws.py || echo "ERROR: Metaflow+AWS configuration")
 
 .PHONY: init
 ## Fully initialise a project: install; setup github repo; setup S3 bucket
@@ -134,15 +134,15 @@ endef
 	@touch $@
 	@echo " DONE"
 
-.cookiecutter/state/setup-metaflow:
-	@echo -n "Configuring Metaflow + AWS"
-	@$(call execute_in_env, \
-	 get_metaflow_config\
-	 > $@.log 2>&1\
-	 || $(call err,AWS + Metaflow setup failed)\
-	)
-	@touch $@
-	@echo " DONE"
+#.cookiecutter/state/setup-metaflow:
+#	@echo -n "Configuring Metaflow + AWS"
+#	@$(call execute_in_env, \
+#	 get_metaflow_config\
+#	 > $@.log 2>&1\
+#	 || $(call err,AWS + Metaflow setup failed)\
+#	)
+#	@touch $@
+#	@echo " DONE"
 
 .cookiecutter/state/setup-github:
 	@echo -n "Creating and configuring Github repo '${GITHUB_ACCOUNT}/${REPO_NAME}'"
