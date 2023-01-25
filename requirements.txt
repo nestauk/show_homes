@@ -3,7 +3,6 @@ keplergl==0.3.2
 metaflow==2.7.7
 scipy==1.5.2
 pandas==1.4.3
-asf_core_data@git+ssh://git@github.com/nestauk/asf_core_data.git@19_epc_from_s3
 numpy==1.19.2
 gradio==3.16.2
 PyYAML==6.0
