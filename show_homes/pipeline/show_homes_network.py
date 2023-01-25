@@ -9,16 +9,12 @@ Author: Julia Suter
 import numpy as np
 from scipy import spatial
 import random
-import geopy
 import pandas as pd
 import gradio as gr
 
 from show_homes.config import config
 from show_homes.utils import geo_utils, kepler_maps
-
-from geopy.distance import distance
-
-random.seed(42)
+from show_homes.getters import show_home_data
 
 
 prop_type_dict = {
@@ -26,21 +22,82 @@ prop_type_dict = {
         ["Flat", "Maisonette"],
         [
             "Semi-Detached",
-            "Mid-Terrace",
+            "Terraced",
             "Detached",
-            "End-Terrace",
             "unknown",
-            "Encloded End-Terrace",
-            "Enclosed Mid-Terrace",
         ],
     ),
     "Terraced House": (
         ["House", "Bungalow", "Park home"],
-        ["Enclosed Mid-Terrace", "Enclosed End-Terrace", "End-Terrace", "Mid-Terrace"],
+        ["Terraced"],
     ),
     "Detached House": (["House", "Bungalow", "Park home"], ["Detached"]),
     "Semi-detached House": (["House", "Bungalow", "Park home"], ["Semi-Detached"]),
 }
+
+
+def get_skeleton_df(coords_dict):
+    """Return skeleton structures for connections dataframes.
+
+    Args:
+        coords_dict (dict): Coordinates for visitor and show homes in Cartesian and degree. If None, empty dataframe is returned.
+
+    Returns:
+        tuple: connections_df, visitor_df, host_df, network_metrics
+    """
+
+    connections_df = pd.DataFrame(
+        {},
+        columns=[
+            "LATITUDE source",
+            "LONGITUDE source",
+            "LATITUDE target",
+            "LONGITUDE target",
+            "Distance",
+        ],
+    )
+
+    if coords_dict is None:
+        host_array = np.zeros((0, 5))
+        visitor_array = np.zeros((0, 5))
+    else:
+        host_array = np.zeros((coords_dict["host deg"].shape[0], 5))
+        host_array[:, 0:2] = coords_dict["host deg"][:, 0:2]
+
+        visitor_array = np.zeros((coords_dict["visitor deg"].shape[0], 5))
+        visitor_array[:, 0:2] = coords_dict["visitor deg"][:, 0:2]
+
+    host_df = pd.DataFrame(
+        host_array,
+        columns=[
+            "LATITUDE",
+            "LONGITUDE",
+            "Visitor matches (capped)",
+            "Visitor matches",
+            "Matched",
+        ],
+    )
+
+    visitor_df = pd.DataFrame(
+        visitor_array,
+        columns=[
+            "LATITUDE",
+            "LONGITUDE",
+            "Host matches (capped)",
+            "Host matches",
+            "Matched",
+        ],
+    )
+
+    network_metrics = {}
+    network_metrics["capacity visitor"] = 0
+    network_metrics["capacity host"] = 0
+    network_metrics["coverage visitor"] = 0
+    network_metrics["coverage host"] = 0
+    network_metrics["over cap ratio"] = 0
+    network_metrics["mean dist"] = 0
+
+    return connections_df, visitor_df, host_df, network_metrics
 
 
 def get_network_homes_for_prop_type(df, property_type):
@@ -59,7 +116,9 @@ def get_network_homes_for_prop_type(df, property_type):
     """
 
     if property_type not in list(prop_type_dict.keys()) + ["Any"]:
-        raise NotImplementedError("'{}' is not a valid property type.")
+        raise NotImplementedError(
+            "'{}' is not a valid property type.".format(property_type)
+        )
 
     if property_type == "Any":
         filter_cond = ~df["LATITUDE"].isna()
@@ -68,15 +127,15 @@ def get_network_homes_for_prop_type(df, property_type):
             df["BUILT_FORM"].isin(prop_type_dict[property_type][1])
         )
 
-    # Exclude vistitor homes with unrealistic EPC and within high deprivation areas
+    # Exclude visitor homes with unrealistic EPC and within high deprivation areas
     visitor_cond = (
         (df["TENURE"] == "owner-occupied")
-        & (df["CURRENT_ENERGY_RATING"].isin(["E", "D", "C"]))
+        & (df["CURRENT_ENERGY_RATING"].isin(["E", "D", "C", "B"]))
         & (df["IMD Decile"] >= 5)
         & (~df["HP_INSTALLED"])
     )
 
-    visitor_homes = df.loc[~df["HP_INSTALLED"] & filter_cond & visitor_cond]
+    visitor_homes = df.loc[filter_cond & visitor_cond]
     host_homes = df.loc[df["HP_INSTALLED"]]
     host_homes_similar = df.loc[df["HP_INSTALLED"] & filter_cond]
 
@@ -127,13 +186,11 @@ def get_samples(
 
         # Which properties could be within reach (2 * max distance from randomly selected hosue in LA)
         host_tree = spatial.KDTree(coords_dict["host cart"])
+
         within_reach_idx = host_tree.query_ball_point(
             coords_dict["visitor cart"][0], d_max * 2
         )
 
-        visitor_homes = visitor_homes.sample(frac=1, random_state=42)[
-            :n_visitor_samples
-        ]
         same_la_idx = np.where(host_homes["LOCAL_AUTHORITY_LABEL"] == local_auth)[
             0
         ].tolist()
@@ -176,8 +233,7 @@ def get_samples(
 
 
 def get_coordinates(visitor_homes, host_homes):
-    # TODO: Descripe better
-    """Get coordinates for visitor and host homes in suitable format.
+    """Get coordinates as degree and Cartesian for visitor and host homes.
 
     Args:
         visitor_homes (pd.DatFrame): Visitor home data including latitude and longitude.
@@ -187,19 +243,18 @@ def get_coordinates(visitor_homes, host_homes):
         coords_dict: Dict with coordinates for visitor and host homes.
     """
 
-    # Get coordinates (cartesian and original)
-    visitor_coords_cart, visitor_coords_org = geo_utils.prepare_coords(
-        visitor_homes[["LATITUDE", "LONGITUDE"]].to_numpy()
-    )
-    host_coords_cart, host_coords_org = geo_utils.prepare_coords(
-        host_homes[["LATITUDE", "LONGITUDE"]].to_numpy()
-    )
+    # Get coordinates (in degrees and Cartesian)
+    visitor_coords_deg = visitor_homes[["LATITUDE", "LONGITUDE"]].to_numpy()
+    host_coords_deg = host_homes[["LATITUDE", "LONGITUDE"]].to_numpy()
+
+    visitor_coords_cart = geo_utils.to_Cartesian(visitor_coords_deg)
+    host_coords_cart = geo_utils.to_Cartesian(host_coords_deg)
 
     coords_dict = {
         "visitor cart": visitor_coords_cart,
-        "visitor org": visitor_coords_org,
+        "visitor deg": visitor_coords_deg,
         "host cart": host_coords_cart,
-        "host org": host_coords_org,
+        "host deg": host_coords_deg,
     }
 
     return coords_dict
@@ -295,11 +350,8 @@ def get_visitor_host_matches(coords_dict, d_max, v_max):
     for i in range(host_opts_post_cap.shape[0]):
         m = host_opts_post_cap[i]
 
-        # print(m)
-        assert len(capped_match_idx[i]) == m
-
-        connections[counter : counter + m, :2] = coords_dict["host org"][i]
-        connections[counter : counter + m, 2:4] = coords_dict["visitor org"][
+        connections[counter : counter + m, :2] = coords_dict["host deg"][i]
+        connections[counter : counter + m, 2:4] = coords_dict["visitor deg"][
             capped_match_idx[i]
         ]
 
@@ -328,7 +380,7 @@ def get_options_and_connections_as_df(
     """Transform host and visitors options and connections in easy-to-use dataframes.
 
     Args:
-        connections (np.array): _description_
+        connections (np.array): Coordinates and distances for successful connection pairs.
         coords_dict (dict): Dict with coordinates for host and visitor homes.
         visitor_data (list): Data about visitor options and matches.
         host_data (list): Data about host options and matches.
@@ -338,8 +390,8 @@ def get_options_and_connections_as_df(
         visitor_df, host_df, connections_df: Dataframes containing info in accessible way.
     """
 
-    n_visitor_samples, visitor_opts_post_cap, visitor_opts_pre_cap = visitor_data
-    n_valid_hp_props, host_opts_post_cap, host_opts_pre_cap = host_data
+    _, visitor_opts_post_cap, visitor_opts_pre_cap = visitor_data
+    _, host_opts_post_cap, host_opts_pre_cap = host_data
 
     # Host dataframe for all info about options and matches
     # Connections dataframe with all connections for succesful matches
@@ -354,41 +406,16 @@ def get_options_and_connections_as_df(
         ],
     )
 
-    # Visitor dataframe for all info about options and matches
-    visitor_data = np.zeros((n_visitor_samples, 5))
-    visitor_data[:, 0:2] = coords_dict["visitor org"][:, 0:2]
-    visitor_data[:, 2] = visitor_opts_post_cap
-    visitor_data[:, 3] = visitor_opts_pre_cap
-    visitor_data[:, 4] = visitor_opts_post_cap > 0
+    # Get skeleton for df and fill with values
+    _, visitor_df, host_df, _ = get_skeleton_df(coords_dict)
 
-    visitor_df = pd.DataFrame(
-        visitor_data,
-        columns=[
-            "LATITUDE",
-            "LONGITUDE",
-            "Host matches (capped)",
-            "Host matches",
-            "Matched",
-        ],
-    )
+    visitor_df["Host matches (capped)"] = visitor_opts_post_cap
+    visitor_df["Host matches"] = visitor_opts_pre_cap
+    visitor_df["Matched"] = visitor_opts_post_cap > 0
 
-    # Host dataframe for all info about options and matches
-    host_data = np.zeros((n_valid_hp_props, 5))
-    host_data[:, 0:2] = coords_dict["host org"][:, 0:2]
-    host_data[:, 2] = host_opts_post_cap
-    host_data[:, 3] = host_opts_pre_cap
-    host_data[:, 4] = host_opts_post_cap > 0
-
-    host_df = pd.DataFrame(
-        host_data,
-        columns=[
-            "LATITUDE",
-            "LONGITUDE",
-            "Visitor matches (capped)",
-            "Visitor matches",
-            "Matched",
-        ],
-    )
+    host_df["Visitor matches (capped)"] = host_opts_post_cap
+    host_df["Visitor matches"] = host_opts_pre_cap
+    host_df["Matched"] = host_opts_post_cap > 0
 
     if save_df:
         visitor_df.to_csv(config.HOST_VIS_CON_OUT_DATA_PATH / "visitor_df.csv")
@@ -461,7 +488,7 @@ def handle_any_to_same_edge_case(visitor_homes, host_homes, d_max, v_max):
         )
 
         network_metrics = compute_network_metrics(
-            visitor_data, host_data, v_max, verbose=False
+            connections_df, visitor_data, host_data, v_max, verbose=False
         )
 
         # Collect results for this property type
@@ -488,64 +515,40 @@ def handle_any_to_same_edge_case(visitor_homes, host_homes, d_max, v_max):
 
         network_metrics["visitor samples"] = total_n_visitor_samples
         network_metrics["host samples"] = total_n_host_samples
+
         network_metrics["capacity visitor"] = (
             total_visitor_options / total_n_visitor_samples
-        )
-        network_metrics["capacity host"] = total_host_options / total_n_host_samples
-        network_metrics["coverage visitor"] = (
-            total_visitor_options / total_n_visitor_samples
-        )
+        ).round(1)
+        network_metrics["capacity host"] = (
+            total_host_options / total_n_host_samples
+        ).round(1)
 
-        network_metrics["coverage host"] = total_host_options / total_n_host_samples
-        network_metrics["over cap ratio"] = over_cap_hosts / total_n_host_samples * 100
+        network_metrics["coverage visitor"] = (
+            total_visitor_matches / total_n_visitor_samples
+        ).round(1)
+        network_metrics["coverage host"] = (
+            total_host_matches / total_n_host_samples
+        ).round(1)
+        network_metrics["over cap ratio"] = round(
+            (over_cap_hosts / total_n_host_samples * 100), 1
+        )
 
     # If no connections have been found, generate default/no matches found results
     else:
-        connections_df = pd.DataFrame(
-            {},
-            columns=[
-                "LATITUDE source",
-                "LONGITUDE source",
-                "LATITUDE target",
-                "LONGITUDE target",
-                "Distance",
-            ],
+        connections_df, visitor_df, host_df, network_metrics = get_skeleton_df(
+            coords_dict
         )
-
-        host_df = pd.DataFrame(
-            {},
-            columns=[
-                "LATITUDE",
-                "LONGITUDE",
-                "Vistor matches (capped)",
-                "Vistor matches",
-                "Matched",
-            ],
-        )
-        visitor_df = pd.DataFrame(
-            {},
-            columns=[
-                "LATITUDE",
-                "LONGITUDE",
-                "Host matches (capped)",
-                "Host matches",
-                "Matched",
-            ],
-        )
-
-        network_metrics["capacity visitor"] = 0
-        network_metrics["capacity host"] = 0
-        network_metrics["coverage visitor"] = 0
-        network_metrics["coverage host"] = 0
-        network_metrics["over cap ratio"] = 0
 
     return visitor_df, host_df, connections_df, network_metrics
 
 
-def compute_network_metrics(visitor_data, host_data, v_max, verbose=False):
+def compute_network_metrics(
+    connections_df, visitor_data, host_data, v_max, verbose=False
+):
     """Compute the show home network metrics given the host and visitor matches.
 
     Args:
+        connections_df (pd.DataFrame): Connections between matches.
         visitor_data (pd.DataFrame): Visitor homes
         host_data (pd.DataFrame): Host homes
         v_max (int): Maximum number of visitors per host home.
@@ -566,14 +569,17 @@ def compute_network_metrics(visitor_data, host_data, v_max, verbose=False):
     host_matches = host_opts_post_cap > 0
     capacity_visitor = np.sum(visitor_opts_post_cap) / n_visitor_samples
     capacity_host = np.sum(host_opts_post_cap) / n_valid_hp_props
-    coverage_visitor = visitor_matches.sum() / visitor_matches.shape[0]
-    coverage_host = host_matches.sum() / host_matches.shape[0]
+    coverage_visitor = visitor_matches.sum() / n_visitor_samples
+    coverage_host = host_matches.sum() / n_valid_hp_props
 
-    capacity_visitor = round(capacity_visitor, 2)
-    capacity_host = round(capacity_host, 2)
-    coverage_visitor = round(coverage_visitor * 100, 2)
-    coverage_host = round(coverage_host * 100, 2)
+    capacity_visitor = round(capacity_visitor, 1)
+    capacity_host = round(capacity_host, 1)
+    coverage_visitor = round(coverage_visitor * 100, 1)
+    coverage_host = round(coverage_host * 100, 1)
     over_cap_ratio = round(over_cap_ratio)
+
+    mean_dist = np.mean(connections_df["Distance"]).round(1)
+    median_dist = np.median(connections_df["Distance"]).round(1)
 
     if verbose:
         print()
@@ -584,6 +590,7 @@ def compute_network_metrics(visitor_data, host_data, v_max, verbose=False):
         print("Visitor coverage: {}%".format(coverage_visitor))
         print("Host coverage: {}%".format(coverage_host))
         print("Over cap ratio: {}%".format(over_cap_ratio))
+        print("Mean distance: {}".format(mean_dist))
 
     return {
         "capacity host": capacity_host,
@@ -598,6 +605,8 @@ def compute_network_metrics(visitor_data, host_data, v_max, verbose=False):
         "visitor samples": n_visitor_samples,
         "host samples": n_valid_hp_props,
         "over cap hosts": np.count_nonzero(host_opts_pre_cap >= v_max),
+        "mean dist": mean_dist,
+        "median dist": median_dist,
     }
 
 
@@ -621,15 +630,19 @@ def prepare_textual_output(
     local_auth_output = " in " + local_auth if local_auth != "GB" else " in GB"
     property_type = property_type if property_type != "Any" else "any propertie"
 
-    output = "Network for {}s{}\n=========\nAverage visitor matches for show homes:\t{}\nAverage host matches for visitor homes:\t\t{}\nHost Coverage:\t\t{}%\nVisitor Coverage:\t{}%\nOver cap ratio:\t\t\t{}%".format(
+    output = "Network for {}s{}\n=========\nAverage visitor matches for show homes:\t{}\nAverage host matches for visitor homes:\t\t{}\nVisitor Coverage:\t\t{}%\nHost Coverage:\t\t{}%\nOver cap ratio:\t\t\t{}%\nMean distance:\t\t{}".format(
         property_type,
         local_auth_output,
         network_metrics["capacity host"],
         network_metrics["capacity visitor"],
-        network_metrics["coverage host"],
         network_metrics["coverage visitor"],
+        network_metrics["coverage host"],
         network_metrics["over cap ratio"],
+        network_metrics["mean dist"],
     )
+
+    if post_samp_text == "":
+        return pre_samp_text
 
     text_output = pre_samp_text + "\n\n" + post_samp_text + "\n\n" + output
     return text_output
@@ -679,7 +692,7 @@ def model_network(
         str(v_max),
         str(d_max),
         local_auth,
-    )
+    ).replace(" ", "_")
 
     if verbose:
         print("Settings\n************")
@@ -700,21 +713,47 @@ def model_network(
     # Whether to only use simialr properties or not
     host_homes = host_homes if version == "any" else host_homes_similar
 
-    # Sample visitor and host homes
-    sample_outputs = get_samples(
-        visitor_homes,
-        host_homes,
-        visitor_ratio,
-        host_ratio,
-        local_auth,
-        d_max,
-        verbose=verbose,
-    )
+    has_visitors = visitor_homes.shape[0] > 0
+    has_hosts = host_homes.shape[0] > 0
 
-    visitor_homes, host_homes, pre_samp_text, post_samp_text = sample_outputs
+    # Only sample when there are both visitor and host homes
+    if has_visitors and has_hosts:
+
+        # Sample visitor and host homes
+        sample_outputs = get_samples(
+            visitor_homes,
+            host_homes,
+            visitor_ratio,
+            host_ratio,
+            local_auth,
+            d_max,
+            verbose=verbose,
+        )
+
+        visitor_homes, host_homes, pre_samp_text, post_samp_text = sample_outputs
+
+        # Update
+        has_visitors = visitor_homes.shape[0] > 0
+        has_hosts = host_homes.shape[0] > 0
+
+    # Handle edge case of there being no visitor or host homes
+    if not has_visitors or not has_hosts:
+
+        missing_data_text = "no visitor homes" if not has_visitors else "no show homes"
+        missing_data_text = (
+            "no visitor homes and no show homes"
+            if not has_visitors and not has_hosts
+            else missing_data_text
+        )
+
+        pre_samp_text = "This parameter combination does not allow building a network of heat pump show homes as there are {}.\n\nTry increasing the host or visitor ratio, select a different property type or local authority.".format(
+            missing_data_text
+        )
+        post_samp_text = ""
+        connections_df, visitor_df, host_df, network_metrics = get_skeleton_df(None)
 
     # Handle special edge case
-    if property_type == "Any" and same_prop_type:
+    elif property_type == "Any" and same_prop_type:
 
         (
             host_df,
@@ -732,7 +771,7 @@ def model_network(
         )
 
         network_metrics = compute_network_metrics(
-            visitor_data, host_data, v_max, verbose=verbose
+            connections_df, visitor_data, host_data, v_max, verbose=verbose
         )
 
         visitor_df = visitor_data[-1]
@@ -752,7 +791,7 @@ def model_network(
 
 def main():
 
-    df = pd.read_csv(config.PROJECT_DIR / "epc_for_show_homes.csv")
+    df = show_home_data.get_show_home_data()
     # show_homes_network.model_network(df, 'Detached House', True, 1,5, 5, 6, 30, 'GB', verbose=True)
 
     def G(
@@ -781,7 +820,7 @@ def main():
 
     property_types = [
         "Flat",
-        "Semi-detached house",
+        "Semi-detached House",
         "Detached House",
         "Terraced House",
         "Any",
@@ -791,25 +830,25 @@ def main():
     demo = gr.Interface(
         fn=G,
         inputs=[
-            gr.inputs.Radio(
-                property_types, label="Property Type", default="Detached House"
+            gr.components.Radio(
+                property_types, label="Property Type", value="Detached House"
             ),
-            gr.inputs.Radio(
-                [True, False], label="Show home of same property", default=True
+            gr.components.Radio(
+                [True, False], label="Show home of same property", value=True
             ),
-            gr.inputs.Slider(0, 100, default=1, step=1, label="Host ratio (%)"),
-            gr.inputs.Slider(0, 100, default=5, step=1, label="Visitor ratio (%)"),
-            gr.inputs.Slider(1, 50, default=5, step=1, label="Max visitors"),
-            gr.inputs.Slider(
-                1, 50, default=6, step=1, label="Number of slots/open days"
+            gr.components.Slider(0, 100, value=1, step=1, label="Host ratio (%)"),
+            gr.components.Slider(0, 100, value=5, step=1, label="Visitor ratio (%)"),
+            gr.components.Slider(1, 50, value=5, step=1, label="Max visitors"),
+            gr.components.Slider(
+                1, 50, value=6, step=1, label="Number of slots/open days"
             ),
-            gr.inputs.Slider(1, 50, default=35, step=1, label="Max distance"),
-            gr.inputs.Dropdown(
-                local_authorities, default="Manchester", label="Local authorities"
+            gr.components.Slider(1, 50, value=35, step=1, label="Max distance"),
+            gr.components.Dropdown(
+                local_authorities, value="Orkney Islands", label="Local authorities"
             ),
         ],
-        title="Network of Show Homes",
         outputs=["text", "html"],
+        title="Network of Show Homes",
     )
 
     demo.launch(share=True)

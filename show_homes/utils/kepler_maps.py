@@ -1,4 +1,4 @@
-# File: show_homes/utils/kepler_maps
+# File: show_homes/utils/kepler_maps.py
 """
 Create Kepler map for show home models.
 
@@ -7,7 +7,6 @@ Author: Julia Suter
 """
 
 import yaml
-
 import pandas as pd
 from keplergl import KeplerGl
 

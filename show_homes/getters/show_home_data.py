@@ -1,4 +1,4 @@
-# File: show_homes/getters/show_home_data
+# File: show_homes/getters/show_home_data.py
 """
 Generate and load data relevant for show home project.
 
@@ -12,6 +12,7 @@ from asf_core_data.getters.epc import epc_data
 from asf_core_data.pipeline.data_joining import merge_install_dates
 from asf_core_data.getters.supplementary_data.deprivation import imd_data
 from asf_core_data.getters.supplementary_data.geospatial import coordinates
+from asf_core_data.getters import data_download
 
 from show_homes.config import config
 
@@ -24,8 +25,6 @@ def generate_data_for_show_homes_network(data_path="S3"):
     """
 
     EPC_FEAT_SELECTION = [
-        "ADDRESS1",
-        "ADDRESS2",
         "POSTCODE",
         "LOCAL_AUTHORITY_LABEL",
         "CURRENT_ENERGY_RATING",
@@ -39,7 +38,6 @@ def generate_data_for_show_homes_network(data_path="S3"):
         "TRANSACTION_TYPE",
         "TOTAL_FLOOR_AREA",
         "HP_TYPE",
-        "HP_INSTALLED",
         "UPRN",
     ]
 
@@ -66,20 +64,48 @@ def generate_data_for_show_homes_network(data_path="S3"):
     coord_df["POSTCODE"] = coord_df["POSTCODE"].str.replace(" ", "")
     epc_df = pd.merge(epc_df, coord_df, on=["POSTCODE"], how="left")
 
+    epc_df.loc[
+        epc_df["BUILT_FORM"].isin(
+            [
+                "Enclosed Mid-Terrace",
+                "Enclosed End-Terrace",
+                "End-Terrace",
+                "Mid-Terrace",
+            ]
+        ),
+        "BUILT_FORM",
+    ] = "Terraced"
+    epc_df = epc_df.loc[~epc_df["LATITUDE"].isna()]
+
     epc_df.to_csv(config.SHOW_HOME_DATA_OUT_DATA_PATH / "epc_for_show_homes.csv")
 
 
 def get_show_home_data():
-    """Get show home data.
+    """Load show home data, either from local directory or download data folder.
 
     Returns:
         pd.DataFrame: Data relevant for show home model.
     """
-    df = pd.read_csv(config.SHOW_HOME_DATA_OUT_DATA_PATH / "epc_for_show_homes.csv")
+
+    data_file = config.SHOW_HOME_DATA_OUT_DATA_PATH / "epc_for_show_homes.csv"
+    if data_file.exists():
+        df = pd.read_csv(data_file)
+    else:
+        print("Downloading show homes data...")
+        config.SHOW_HOME_DATA_OUT_DATA_PATH.mkdir(parents=True, exist_ok=True)
+        data_download.download_s3_folder(
+            "inputs/data",
+            config.SHOW_HOME_DATA_OUT_DATA_PATH.parent.parent,
+            bucket_name="asf-show-homes",
+        )
+
+        df = pd.read_csv(data_file)
+
     return df
 
 
 if __name__ == "__main__":
 
-    # Also works with data_path = 'S3', but takes much longer
+    # Also works with data_path = 'S3', but takes much longer (easily over 1h)
+    # With local data, takes about 10min
     generate_data_for_show_homes_network(data_path=config.LOCAL_DATA_DIR)
