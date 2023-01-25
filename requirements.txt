@@ -8,3 +8,4 @@ PyYAML==6.0
 asf_core_data@git+ssh://git@github.com/nestauk/asf_core_data.git@19_epc_from_s3
 boto3==1.26.56
 botocore==1.29.56
+awscli
