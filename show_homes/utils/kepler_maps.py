@@ -101,7 +101,7 @@ def create_output_map(
         kepler_config = yaml.load(kepler_config, Loader=yaml.FullLoader)
 
     # Map Booleans/ints to categories for better readability
-    map_dict = {0.0: "no", 1.0: "yes"}
+    map_dict = {False: "no", True: "yes"}
     visitor_df["Matched"] = visitor_df["Matched"].map(map_dict)
     host_df["Matched"] = host_df["Matched"].map(map_dict)
 
