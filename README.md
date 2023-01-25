@@ -1,5 +1,8 @@
 # Heat pump show homes
 
+<img src="./docs/data_tool_example.png">
+<br><br>
+
 While heat pumps are becoming more and more popular, only few people in the UK have actually seen one in action. Having the opportunity to visit a running heat pump in a real home - not a show room - could help many potential adopters to get a better understanding for heat pumps and what it is like to have one at home.
 
 The Sustainable Future team at Nesta tested the idea of show homes for heat pumps with two show homes in London and Glasgow with promising results. Both visitors and hosts were extremely happy with the experience.
@@ -10,7 +13,7 @@ This data work supports the 'real-life' trials by analysing the capacity and rea
 
 In further research, we built a data tool matches visitor home to show homes (still using model data) while considering maximum diving distance and capacity of the show homes. The mock example below shows how certain visitor homes (gray) cannot be matched with a suitable host home (blue), either because the host home is too far away or because it's already occupied by other visitors.
 
-<img src="./docs/mock_network_example.png"  width="400"  height="300">
+<img src="./docs/mock_network_example.png"  width="270"  height="200">
 
 The data tool lets you explore different scenarios and compute the impact and reach of a network. For example, you can set the number of visitors per slot, adjust the maximum driving distance or play around with different numbers of hosts and visitors.
 
@@ -22,8 +25,8 @@ We found different patterns for different areas and prooperty types when modelli
 </p>
 
 <p float="left">
-<img src="./docs/network_example_3.png"  width="250" height='150'>
-<img src="./docs/network_example_4.png"  width="200"   height="150">
+<img src="./docs/network_example_3.png"  width="250" height='180'>
+<img src="./docs/network_example_4.png"  width="220"   height="180">
 </p>
 
 Future research may include an agent-based model that investigates and models how a network would develop over time in different areas.

@@ -37,7 +37,7 @@ prop_type_dict = {
 
 
 def get_skeleton_df(coords_dict):
-    """Return skeleton structures for connections dataframes.
+    """Return skeleton structures for dataframes representing visitor and host homes and their matches.
 
     Args:
         coords_dict (dict): Coordinates for visitor and show homes in Cartesian and degree. If None, empty dataframe is returned.
