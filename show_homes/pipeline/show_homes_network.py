@@ -656,8 +656,8 @@ def model_network(
     df,
     property_type,
     same_prop_type,
-    host_ratio,
     visitor_ratio,
+    host_ratio,
     v_max_per_slot,
     n_slots,
     d_max,
@@ -670,8 +670,8 @@ def model_network(
         df (pd.DataFrame): EPC data (including whether or not HP is installed).
         property_type (str): Property type to filter for.
         same_prop_type (boolean): Whether or not host home has to be of same type as visitor home.
-        host_ratio (float): How many of the properties with heat pump will host.
         visitor_ratio (float): How many of the properties without heat pump/potential visitors will want to visit.
+        host_ratio (float): How many of the properties with heat pump will host.
         v_max_per_slot (int): How many visitors per splot.
         n_slots (_type_): How many slots/open days.
         d_max (_type_): Maximum distance visitors are willing to travel to see a heat pump.
@@ -794,15 +794,26 @@ def model_network(
 
 
 def main():
+    """Create show home network.
+
+    To run this, follow the following steps:
+    cd show_homes/analysis
+    python ../pipeline/show_homes_network.py
+
+    That way, the maps will be saved in the correct place: show_homes/analysis/maps
+    which will allow gradio find the maps without issues.
+
+    No need to find more elegant solution as the sharable gradio link can easily be created in other ways.
+    """
 
     df = show_home_data.get_show_home_data()
-    # show_homes_network.model_network(df, 'Detached House', True, 1,5, 5, 6, 30, 'GB', verbose=True)
+    # show_homes_network.model_network(df, 'Detached House', True, 5, 1, 5, 6, 30, 'GB', verbose=True)
 
     def G(
         property_type,
         same_prop_type,
-        host_ratio,
         visitor_ratio,
+        host_ratio,
         v_max,
         n_open_days,
         d_max,
@@ -813,8 +824,8 @@ def main():
             df,
             property_type,
             same_prop_type,
-            host_ratio,
             visitor_ratio,
+            host_ratio,
             v_max,
             n_open_days,
             d_max,
@@ -829,7 +840,11 @@ def main():
         "Terraced House",
         "Any",
     ]
-    local_authorities = sorted(list(df["LOCAL_AUTHORITY_LABEL"].unique())) + ["GB"]
+    local_authorities = [
+        la
+        for la in sorted(list(df["LOCAL_AUTHORITY_LABEL"].unique())) + ["GB"]
+        if la != "unknown"
+    ]
 
     demo = gr.Interface(
         fn=G,
@@ -840,8 +855,8 @@ def main():
             gr.components.Radio(
                 [True, False], label="Show home of same property", value=True
             ),
-            gr.components.Slider(0, 100, value=1, step=1, label="Host ratio (%)"),
             gr.components.Slider(0, 100, value=5, step=1, label="Visitor ratio (%)"),
+            gr.components.Slider(0, 100, value=1, step=1, label="Host ratio (%)"),
             gr.components.Slider(1, 50, value=5, step=1, label="Max visitors"),
             gr.components.Slider(
                 1, 50, value=6, step=1, label="Number of slots/open days"
