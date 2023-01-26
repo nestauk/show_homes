@@ -1,7 +1,7 @@
 # Heat pump show homes
 
 <img src="./docs/data_tool_example.png">
-<br><br>
+<br>
 
 While heat pumps are becoming more and more popular, only few people in the UK have actually seen one in action. Having the opportunity to visit a running heat pump in a real home - not a show room - could help many potential adopters to get a better understanding for heat pumps and what it is like to have one at home.
 
@@ -11,15 +11,15 @@ Find out more about the project and sign up for the next round of show home even
 
 This data work supports the 'real-life' trials by analysing the capacity and reach of potential networks of show homes in different areas. Our initial data work showed that on average a person is no further than a 15min drive away from the nearest heat pump, which inspired confidence in our project. You can play around with the <a href="https://nestauk.github.io/show_homes/Distances_similar" title="Distance to nearest show home">interactive map</a> that shows the distance to the closest property with a heat pump for a randomly selected sample of visitor and host homes.
 
-In further research, we built a data tool matches visitor home to show homes (still using model data) while considering maximum diving distance and capacity of the show homes. The mock example below shows how certain visitor homes (gray) cannot be matched with a suitable host home (blue), either because the host home is too far away or because it's already occupied by other visitors.
+In further research, we built a data tool matches visitor home to show homes (still using model data) while considering maximum diving distance and capacity of the show homes. The mock example below shows how certain visitor homes (gray) cannot be matched with a suitable host home (blue), either because the host home is too far away or because it's already booked out - in this example, each show home can only host three visitors.
 
-<img src="./docs/mock_network_example.png"  width="270"  height="200">
+<img src="./docs/mock_network_example.png"  width="320"  height="250">
 
 The data tool lets you explore different scenarios and compute the impact and reach of a network. For example, you can set the number of visitors per slot, adjust the maximum driving distance or play around with different numbers of hosts and visitors.
 
 We found different patterns for different areas and prooperty types when modelling a potential network, suggesting that show home networks might work better in some areas or may require the addition of strategically placed show homes in remote areas or show rooms (e.g. in DIY stores) in regions with high demand.
 
-<p float="left">
+<!-- <p float="left">
 <img src="./docs/network_example_1.png"  width="250"  height="180">
 <img src="./docs/network_example_2.png"  width="250"  height="180">
 </p>
@@ -27,7 +27,9 @@ We found different patterns for different areas and prooperty types when modelli
 <p float="left">
 <img src="./docs/network_example_3.png"  width="250" height='180'>
 <img src="./docs/network_example_4.png"  width="220"   height="180">
-</p>
+</p> -->
+
+<img src="./docs/network_examples.png"  >
 
 Future research may include an agent-based model that investigates and models how a network would develop over time in different areas.
 
@@ -53,7 +55,7 @@ May throw error at megaflop Configuring Metaflow + AWSAWS + Metaflow setup faile
 make: *** [.cookiecutter/state/setup-metaflow] Error 1
 ```
 
-Next, change env and download the necessary files:
+Next, activate the environment and download the necessary files:
 
 ```
 conda activate show_homes
@@ -67,7 +69,10 @@ If this throws an error like `ModuleNotFoundError: No module named 'bcdoc.mangen
 pip install --upgrade awscli
 ```
 
-Otherwise, you can manually download the necessary files from the S3 bucket named `asf-show-homes`.
+Otherwise, you can manually download the necessary files from the S3 bucket named [asf-show-homes](https://s3.console.aws.amazon.com/s3/buckets/asf-show-homes?region=eu-west-2&tab=objects). If not interested in analysing the speed testing results in detail, downloading the following two files will be sufficient:
+
+- `inputs/kepler_configs/network_gradio_config.txt`
+- `inputs/data/epc_for_show_homes.csv`
 
 ## Contributor guidelines
 
