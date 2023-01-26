@@ -44,7 +44,7 @@ Future research may include an agent-based model that investigates and models ho
 ```
 git clone https://github.com/nestauk/show_homes.git
 cd show_homes
-git checkout 2_average_distance_map
+git checkout 4_show_home_network
 make install
 ```
 
