@@ -855,13 +855,11 @@ def main():
             gr.components.Radio(
                 [True, False], label="Show home of same property", value=True
             ),
-            gr.components.Slider(0, 100, value=5, step=1, label="Visitor ratio (%)"),
-            gr.components.Slider(0, 100, value=1, step=1, label="Host ratio (%)"),
-            gr.components.Slider(1, 50, value=5, step=1, label="Max visitors"),
-            gr.components.Slider(
-                1, 50, value=6, step=1, label="Number of slots/open days"
-            ),
-            gr.components.Slider(1, 50, value=35, step=1, label="Max distance"),
+            gr.components.Slider(0, 50, value=5, step=1, label="Visitor ratio (%)"),
+            gr.components.Slider(0, 50, value=1, step=1, label="Host ratio (%)"),
+            gr.components.Slider(1, 25, value=5, step=1, label="Max visitors"),
+            gr.components.Slider(1, 50, value=6, step=1, label="Max number of slots"),
+            gr.components.Slider(1, 75, value=35, step=1, label="Max distance (in km)"),
             gr.components.Dropdown(
                 local_authorities, value="Orkney Islands", label="Local authorities"
             ),
@@ -869,7 +867,6 @@ def main():
         outputs=["text", "html"],
         title="Network of Show Homes",
     )
-
     demo.launch(share=True)
 
 
