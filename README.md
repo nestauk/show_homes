@@ -3,21 +3,21 @@
 <img src="./docs/data_tool_example.png">
 <br>
 
-While heat pumps are becoming more and more popular, only few people in the UK have actually seen one in action. Having the opportunity to visit a running heat pump in a real home - not a show room - could help many potential adopters to get a better understanding for heat pumps and what it is like to have one at home.
+While more and more people become aware of heat pumps as a low-carbon techonology, only few people in the UK have actually seen one in action. Having the opportunity to visit a functioning heat pump in a real home - not a show room - could help many potential adopters to get a better understanding for heat pumps and what it is like to have one at home.
 
 The Sustainable Future team at Nesta tested the idea of show homes for heat pumps with two show homes in London and Glasgow with promising results. Both visitors and hosts were extremely happy with the experience.
 
 Find out more about the project and sign up for the next round of show home events on <a href="visitaheatpump.com/" title="VisitAHeatPump">visitaheatpump.com</a>.
 
-This data work supports the 'real-life' trials by analysing the capacity and reach of potential networks of show homes in different areas. Our initial data work showed that on average a person is no further than a 15min drive away from the nearest heat pump, which inspired confidence in our project. You can play around with the <a href="https://nestauk.github.io/show_homes/Distances_similar" title="Distance to nearest show home">interactive map</a> that shows the distance to the closest property with a heat pump for a randomly selected sample of visitor and host homes.
+This data work supports the 'real-life' trials by analysing the capacity and reach of potential networks of show homes in different areas. Our initial data work showed that _on average_ any home is no further than a 15min drive away from the nearest heat pump, which inspired confidence in our project. You can play around with the <a href="https://nestauk.github.io/show_homes/Distances_similar" title="Distance to nearest show home">interactive map</a> that shows the distance to the closest property with a heat pump for a randomly selected sample of visitor and host homes. And find more insights from our initial speed-testing project [here](https://www.nesta.org.uk/a-network-of-show-homes-for-heat-pumps/).
 
-In further research, we built a data tool matches visitor home to show homes (still using model data) while considering maximum diving distance and capacity of the show homes. The mock example below shows how certain visitor homes (gray) cannot be matched with a suitable host home (blue), either because the host home is too far away or because it's already booked out - in this example, each show home can only host three visitors.
+In further research, we built a data tool that matches visitor homes to show homes (still using model data) while considering maximum driving distance and capacity of the show homes. The mock example below shows how certain visitor homes (gray) cannot be matched with a suitable host home (blue), either because the host home is too far away or because it's already booked out - in this simple example, each show home can only host three visitors.
 
 <img src="./docs/mock_network_example.png"  width="320"  height="250">
 
 The data tool lets you explore different scenarios and compute the impact and reach of a network. For example, you can set the number of visitors per slot, adjust the maximum driving distance or play around with different numbers of hosts and visitors.
 
-We found different patterns for different areas and prooperty types when modelling a potential network, suggesting that show home networks might work better in some areas or may require the addition of strategically placed show homes in remote areas or show rooms (e.g. in DIY stores) in regions with high demand.
+We found different patterns for different areas and property types when modelling a potential network, suggesting that show home networks may not work equally well in all areas and may require the addition of strategically placed show homes in remote areas or show rooms (e.g. in DIY stores) in regions with high demand.
 
 <!-- <p float="left">
 <img src="./docs/network_example_1.png"  width="250"  height="180">
