@@ -2,12 +2,12 @@ requests==2.28.1
 keplergl==0.3.2
 scipy==1.5.2
 pandas==1.4.3
-numpy==1.19.2
-gradio==3.16.2
-PyYAML==6.0
+numpy
+gradio
+PyYAML
 asf_core_data@git+ssh://git@github.com/nestauk/asf_core_data.git@dev
 boto3==1.26.56
-botocore==1.29.56
-awscli==0.11.0
+botocore
+awscli
 seaborn==0.11.2
 geopy==2.2.0
