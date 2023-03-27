@@ -54,6 +54,9 @@ def generate_data_for_show_homes_network(data_path="S3", save_locally=True):
         imd_df, epc_df, postcode_label="POSTCODE"
     )
 
+    # Temporary fix until asf-core-data is updated
+    epc_df = epc_df[epc_df['HP_INSTALLED'].notna()]
+
     epc_df.loc[
         epc_df["BUILT_FORM"].isin(
             [
