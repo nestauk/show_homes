@@ -35,7 +35,7 @@ Future research may include an agent-based model that investigates and models ho
 
 ---
 
-## Setup
+## Setup and Troubleshooting
 
 - Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter/quickstart), in brief:
   - Install: `git-crypt`, `direnv`, and `conda`
@@ -48,7 +48,7 @@ git checkout 4_show_home_network
 make install
 ```
 
-`make install` may take a while and finally throw an error for AWS+Metaflow like below, but that's fine.
+`make install` may take a while and and could potentially throw an error for AWS+Metaflow like below, but that's fine.
 
 ```
 May throw error at megaflop Configuring Metaflow + AWSAWS + Metaflow setup failed, check .cookiecutter/state/setup-metaflow for more info
@@ -73,6 +73,11 @@ Otherwise, you can manually download the necessary files from the S3 bucket name
 
 - `inputs/kepler_configs/network_gradio_config.txt`
 - `inputs/data/epc_for_show_homes.csv`
+
+If you run into any import errors when running the notebooks or scripts, try:
+
+```pip install -r requirements.txt --force-reinstall```
+
 
 ## Contributor guidelines
 
