@@ -14,7 +14,6 @@ This data work supports the 'real-life' trials by analysing the capacity and rea
 In further research, we built a data tool that matches visitor homes to show homes (still using model data) while considering maximum driving distance and capacity of the show homes. The mock example below shows how certain visitor homes (gray) cannot be matched with a suitable host home (blue), either because the host home is too far away or because it's already booked out - in this simple example, each show home can only host three visitors.
 
 <img src="./docs/mock_network_example.png"  width="400"  height="300">
-<img src="./docs/mock_network_example.png"  width="400"  height="300">
 
 The data tool lets you explore different scenarios and compute the impact and reach of a network. For example, you can set the number of visitors per slot, adjust the maximum driving distance or play around with different numbers of hosts and visitors.
 
@@ -30,7 +29,6 @@ We found different patterns for different areas and property types when modellin
 <img src="./docs/network_example_4.png"  width="220"   height="180">
 </p> -->
 
-<img src="./docs/network_examples.png"  width="800"  height="580">
 <img src="./docs/network_examples.png"  width="800"  height="580">
 
 Future research may include an agent-based model that investigates and models how a network would develop over time in different areas.
@@ -50,7 +48,6 @@ git checkout 4_show_home_network
 make install
 ```
 
-`make install` may take a while and and could potentially throw an error for AWS+Metaflow like below, but that's fine.
 `make install` may take a while and and could potentially throw an error for AWS+Metaflow like below, but that's fine.
 
 ```
@@ -79,11 +76,9 @@ Otherwise, you can manually download the necessary files from the S3 bucket name
 
 If you run into any import errors when running the notebooks or scripts, try:
 
-`pip install -r requirements.txt --force-reinstall`
-
-If you run into any import errors when running the notebooks or scripts, try:
-
-`pip install -r requirements.txt --force-reinstall`
+```
+pip install -r requirements.txt --force-reinstall`
+```
 
 ## Contributor guidelines
 
