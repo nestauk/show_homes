@@ -77,7 +77,7 @@ Otherwise, you can manually download the necessary files from the S3 bucket name
 If you run into any import errors when running the notebooks or scripts, try:
 
 ```
-pip install -r requirements.txt --force-reinstall`
+pip install -r requirements.txt --force-reinstall
 ```
 
 ## Contributor guidelines

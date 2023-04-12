@@ -187,7 +187,6 @@ def get_samples(
 
     # Get show homes that are likely within reach (both inside and outside of LA area)
     if local_auth != "GB":
-
         # Which properties could be within reach (2 * max distance from randomly selected hosue in LA)
         host_tree = spatial.KDTree(coords_dict["host cart"])
 
@@ -208,7 +207,6 @@ def get_samples(
     host_homes = host_homes.sample(frac=1, random_state=42)[:n_host_samples]
 
     if verbose:
-
         print("Before subsampling:")
         print("# Props without HPs: {}".format(n_original_visitor_homes))
         print("# Props with HPs: {}".format(n_original_show_homes))
@@ -320,7 +318,6 @@ def get_visitor_host_matches(coords_dict, d_max, v_max):
 
     # Catch any matches
     if [x for xs in host_vis_match_idx for x in xs]:
-
         visitor_opts_pre_cap, host_opts_pre_cap = get_visitor_host_options(
             host_vis_match_idx, n_visitor_samples
         )
@@ -467,7 +464,6 @@ def handle_any_to_same_edge_case(visitor_homes, host_homes, d_max, v_max):
         "Detached House",
         "Terraced House",
     ]:
-
         prop_vis_homes = visitor_homes[
             (visitor_homes["PROPERTY_TYPE"].isin(prop_type_dict[prop_type][0]))
             & visitor_homes["BUILT_FORM"].isin(prop_type_dict[prop_type][1])
@@ -670,8 +666,10 @@ def model_network(
         df (pd.DataFrame): EPC data (including whether or not HP is installed).
         property_type (str): Property type to filter for.
         same_prop_type (boolean): Whether or not host home has to be of same type as visitor home.
-        visitor_ratio (float): How many of the properties without heat pump/potential visitors will want to visit.
-        host_ratio (float): How many of the properties with heat pump will host.
+        visitor_ratio (float): Percentage of the properties without heat pump to consider visitors,
+            e.g. 0.05 means that 5% of all non-HP properties in area will be considered visitors.
+        host_ratio (float): Percentage of the properties with heat pump to consider hosts,
+            e.g. 0.1 means that 10% of all HP-properties in area will be considered hosts.
         v_max_per_slot (int): How many visitors per splot.
         n_slots (_type_): How many slots/open days.
         d_max (_type_): Maximum distance visitors are willing to travel to see a heat pump.
@@ -717,14 +715,13 @@ def model_network(
     # Whether to only use simialr properties or not
     host_homes = host_homes if version == "any" else host_homes_similar
 
-    has_visitors = visitor_homes.shape[0] > 0
-    has_hosts = host_homes.shape[0] > 0
+    has_visitors = not visitor_homes.empty
+    has_hosts = not host_homes.empty
 
     # Only sample when there are both visitor and host homes
     if has_visitors and has_hosts:
-
         # Sample visitor and host homes
-        sample_outputs = get_samples(
+        visitor_homes, host_homes, pre_samp_text, post_samp_text = get_samples(
             visitor_homes,
             host_homes,
             visitor_ratio,
@@ -734,15 +731,12 @@ def model_network(
             verbose=verbose,
         )
 
-        visitor_homes, host_homes, pre_samp_text, post_samp_text = sample_outputs
-
         # Update
-        has_visitors = visitor_homes.shape[0] > 0
-        has_hosts = host_homes.shape[0] > 0
+        has_visitors = not visitor_homes.empty
+        has_hosts = not host_homes.empty
 
     # Handle edge case of there being no visitor or host homes
     if not has_visitors or not has_hosts:
-
         missing_data_text = "no visitor homes" if not has_visitors else "no show homes"
         missing_data_text = (
             "no visitor homes and no show homes"
@@ -758,7 +752,6 @@ def model_network(
 
     # Handle special edge case
     elif property_type == "Any" and same_prop_type:
-
         (
             host_df,
             visitor_df,
@@ -819,7 +812,6 @@ def main():
         d_max,
         local_auth,
     ):
-
         return model_network(
             df,
             property_type,
