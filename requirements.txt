@@ -5,9 +5,9 @@ pandas==1.4.3
 numpy
 gradio
 PyYAML
-asf_core_data@git+ssh://git@github.com/nestauk/asf_core_data.git@dev
 boto3==1.26.56
 botocore
 awscli
 seaborn==0.11.2
 geopy==2.2.0
+asf_core_data@git+https://git@github.com/nestauk/asf_core_data.git@dev
