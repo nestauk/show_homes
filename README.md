@@ -55,7 +55,7 @@ May throw error at megaflop Configuring Metaflow + AWSAWS + Metaflow setup faile
 make: *** [.cookiecutter/state/setup-metaflow] Error 1
 ```
 
-Next, activate the environment and download the necessary files:
+Next, activate the environment and download the necessary files (~4 GB):
 
 ```
 conda activate show_homes
