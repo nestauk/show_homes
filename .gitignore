@@ -20,7 +20,7 @@ metaflow.s3.*
 .run_id
 
 # Notebooks (use jupytext instead!)
-*.ipynb
+#*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -118,8 +118,18 @@ target/
 *.swo
 *~
 
+*.csv
+
 # Mypy cache
 .mypy_cache/
 
 # NPM
 node_modules/
+
+/show_homes/analysis/recycling/*
+
+/show_homes/analysis/maps/*
+/show_homes/analysis/outputs/*
+/show_homes/analysis/data_to_check_whether_missed/
+/outputs/figures/*
+/outputs/maps/*
