@@ -13,8 +13,6 @@
 - [How to use](#setup)
 - [Contributor guidelines](#contributor)
 
----
-
 ## Introduction<a id='intro'></a>
 
 [[back to top]](#top)
@@ -24,8 +22,6 @@ While more and more people become aware of heat pumps as a low-carbon techonolog
 The Sustainable Future team at Nesta tested the idea of show homes for heat pumps with two show homes in London and Glasgow with promising results. Both visitors and hosts were extremely happy with the experience.
 
 Find out more about the project and sign up for the next round of show home events on <a href="visitaheatpump.com/" title="VisitAHeatPump">visitaheatpump.com</a>.
-
----
 
 ## Data work<a id='datawork'></a>
 
@@ -60,8 +56,6 @@ We found different patterns for different areas and property types when modellin
 ### Future work<a id='future'></a>
 
 Future research may include an agent-based model that investigates and models how a network would develop over time in different areas.
-
----
 
 ## Setup<a id='setup'></a>
 
@@ -99,8 +93,6 @@ Alternatively, you can manually download the necessary files from the S3 bucket 
 - `inputs/kepler_configs/network_gradio_config.txt`
 - `inputs/data/epc_for_show_homes.csv`
 
----
-
 ## How to use<a id='use'></a>
 
 [[back to top]](#top)
@@ -115,8 +107,6 @@ b) Run `python show_homes/pipeline/show_homes_network.py ` in a terminal and cli
 Once the tool is open, select the parameters on the lefthand side to create the scenario of choice and click _submit_. Information about your selection and network measures will appear in the top box on the righthand side. The network map will be shown below. Zoom into the map and switch to 3D map (second option in sidebar) to inspect the network more closely. Orange dots represent show homes and purples one stand for visitor homes. The first option in the sidebar _Show layer panels_ reveals the map's layers, which you can activate or deactivate by clicking on them.
 
 The map will also be saved as an HTML file under `show_homes/analysis/maps`. The filename reflects the selected parameters. The HTML file is more suitable for thorough exploration or sharing than the map view in the tool.
-
----
 
 ## Contributor guidelines<a id='contributor'></a>
 
