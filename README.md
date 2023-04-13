@@ -1,8 +1,6 @@
 # Heat pump show homes
 
 <img src="./docs/data_tool_example.png">
-<br>
-<br>
 
 ## Table of Content<a id='top'></a>
 
