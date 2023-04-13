@@ -10,7 +10,7 @@
   - [Modelling network of show homes](#model)
   - [Future work](#future)
 - [Setup](#setup)
-- [How to use](#setup)
+- [How to use](#use)
 - [Contributor guidelines](#contributor)
 
 ## Introduction<a id='intro'></a>
