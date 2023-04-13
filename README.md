@@ -77,7 +77,7 @@ Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-co
 ```
 git clone https://github.com/nestauk/show_homes.git
 cd show_homes
-git checkout 4_show_home_network
+git checkout dev
 make install
 ```
 
@@ -88,7 +88,7 @@ May throw error at megaflop Configuring Metaflow + AWSAWS + Metaflow setup faile
 make: *** [.cookiecutter/state/setup-metaflow] Error 1
 ```
 
-Next, activate the environment and download the necessary files (~4 GB):
+Next, activate the environment and download the necessary files (~3.6 GB):
 
 ```
 conda activate show_homes
